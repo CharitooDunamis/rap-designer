@@ -1,7 +1,0 @@
-<RCC>
-  <qresource>
-    <file alias="watermark">watermark.jpg</file>
-    <file alias="icon">icon.png</file>
-    <file alias="logo">logo.png</file>
-  </qresource>
-</RCC>
