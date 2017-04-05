@@ -1,0 +1,14 @@
+
+# Compiled Python files
+*.pyc
+*.pyd
+
+# Jetbrains IDE Files
+.idea/*
+*.iml
+
+# SublimeText files
+*.sublime-workspace
+
+# Other files
+*.ui
