@@ -49,7 +49,7 @@ def test_geological_forms_have_correct_defaults(wizard):
 
 
 def test_ore_type_combo_has_correct_number_of_items(wizard):
-    item_no = len(MineTypes)
+    item_no = len(OreTypes)
     for i in range(item_no):
         wizard.oreTypeComboBox.setCurrentIndex(i)
         assert wizard.oreTypeComboBox.currentText() != ""
