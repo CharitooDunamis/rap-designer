@@ -3,7 +3,6 @@ This file contains constants needed in various operations.
 Where other is added to an enumeration, it is to be regarded
 as the default case to cover everything else.
 """
-
 from enum import Enum
 
 
@@ -19,7 +18,7 @@ class Countries(Enum):
     other = 4
 
 
-class MineTypes(Enum):
+class OreTypes(Enum):
     """
     The various types of mines or ore for which formulas have been developed
     """

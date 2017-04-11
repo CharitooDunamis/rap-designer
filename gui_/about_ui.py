@@ -69,4 +69,4 @@ class Ui_Dialog(object):
 "<p align=\"justify\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:10pt;\">RAPAR is a software for designing room and pillar mining systems. It uses emperical methods from studies already conducted into room and pillar design.</span></p></body></html>", None))
         self.pushButton.setText(_translate("Dialog", "&OK", None))
 
-import resources3
+from . import resources3

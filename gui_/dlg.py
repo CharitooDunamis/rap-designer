@@ -1,13 +1,13 @@
-gi# import sys
+# import sys
 
 # from qtpy.QtGui import *
 # from qtpy.QtCore import *
 from qtpy.QtWidgets import *
 
-try:
-    from . import about_ui
-except (SystemError, ImportError) as e:
+if __name__ == "__main__":
     import about_ui
+else:
+    from . import about_ui
 
 
 class AboutDialog(QDialog, about_ui.Ui_Dialog):

@@ -4,27 +4,13 @@ import math
 
 from .constants import *
 
-"""
-sample_height
-sample_diameter
-sample_density
-deposit_depth   #overburden height
-unicomp_strength
-initial_room_width
-max_pillar_strength
-factor_of_safety
-angle_of_friction
-cohesion
-bearing_capacity
-"""
-
 
 def pre_mining_field_stress(unit_weight, height):
     return unit_weight * height
 
 
 def factor_of_safety(pillar_strength, pillar_stress):
-    return pillar_strength/pillar_stress
+    return pillar_strength / pillar_stress
 
 
 def good_factor_of_safety(factor):
@@ -183,8 +169,9 @@ def shape_factor_g(friction_angle, pillar_width, pillar_length):
     return 1.0 + (a * b)
 
 
-def max_tensile_stress(sample_unit_weight, span, roof_thickness):
-    return (6 * ORBET_DUVAL_BETA * sample_unit_weight * span ** 2) / roof_thickness
+def max_tensile_stress(sample_unit_weight, span, roof_thickness, constants=PillarFormula.obert_duval):
+    beta = constants[1]
+    return (6 * beta * sample_unit_weight * span ** 2) / roof_thickness
 
 
 def is_good_roof_span_fos(factor):

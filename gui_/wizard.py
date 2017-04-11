@@ -3,24 +3,25 @@ from __future__ import generators
 from __future__ import absolute_import
 
 import sys
+from os.path import (dirname, abspath, join)
 from qtpy.QtGui import *
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
 
-from rpm.constants import *
-from rpm.rpm_oop import Sample
-from rpm.rpm_oop import Pillar
+WIZARD_DIR = dirname(__file__)
 
-# Because of from __future__ import absolute_import python 2
-# translator may complain of attempting to do relative import in
-# a directory that is not package. try ... except handles that
-try:
-    from . import wizard_ui
-except (SystemError, ValueError) as e:
+if __name__ == '__main__':
     import wizard_ui
+    module_path = join(WIZARD_DIR, "..")
+    sys.path.append(module_path)
+else:
+    from . import wizard_ui
+
+from rpm.constants import (PillarFormula, OreTypes, Countries)
+from rpm.rpm_oop import (Sample, Pillar)
 
 
-def text_to_enum(enum, text, sep="_"):
+def text_to_enum(enum, text, sep=" "):
     """
     Converts a string to a value in an enumeration by converting the string
      to lowercase and replacing spaces with underscores
@@ -48,36 +49,38 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         super(ProjectWizard, self).__init__(parent)
         self.setupUi(self)
         self._configure_widgets()
-        watermark = QPixmap("watermark.jpg")
-        logo = QPixmap("icon.png")
+        watermark = QPixmap(join(WIZARD_DIR,"watermark.jpg"))
+        logo = QPixmap(join(WIZARD_DIR, "icon.png"))
         self.setPixmap(QWizard.LogoPixmap, logo)
         self.setPixmap(QWizard.WatermarkPixmap, watermark)
         self.setOption(QWizard.ExtendedWatermarkPixmap)
-        self.setMinimumSize(QSize(650, 400))
+        self.setMinimumSize(QSize(650, 500))
         self._bindings()
         self.update_constant()
         self.setWindowTitle("New RAP Project Wizard")
 
     def _bindings(self):
-        self.connect(self.pillarFormulaComboBox, SIGNAL("currentIndexChanged(QString)"), self.update_constant)
+        self.connect(self.pillarFormulaCombo, SIGNAL("currentIndexChanged(QString)"), self.update_constant)
 
     def update_constant(self):
         k, a, b = 0, 0, 0
-        form_text = self.pillarFormulaComboBox.currentText()
+        form_text = self.pillarFormulaCombo.currentText()
         enum = text_to_enum(PillarFormula, form_text, sep="-")
         try:
             k, a, b = enum.value
+            self.constantKSpin.setEnabled(True)
         except ValueError as e:
             a, b = enum.value
             k = 0
-        self.constantKDoubleSpinBox.setValue(k)
-        self.constantADoubleSpinBox.setValue(a)
-        self.constantBDoubleSpinBox.setValue(b)
+            self.constantKSpin.setEnabled(False)
+        self.constantKSpin.setValue(k)
+        self.constantASpin.setValue(a)
+        self.constantBSpin.setValue(b)
 
     def get_constants(self):
-        k = self.constantKDoubleSpinBox.value()
-        a = self.constantADoubleSpinBox.value()
-        b = self.constantBDoubleSpinBox.value()
+        k = self.constantKSpin.value()
+        a = self.constantASpin.value()
+        b = self.constantBSpin.value()
         return k, a, b
 
     def _configure_widgets(self):
@@ -89,9 +92,9 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         self.geoPage.setSubTitle("Geotechnical & Geological Details")
         self.pillarStrengthPage.setTitle("Pillar Strength Formula")
         self.pillarStrengthPage.setSubTitle("Pillar Strength Formula")
-        self.locationComboBox.addItems([enum_to_text(country) for country in Countries])
-        self.oreTypeComboBox.addItems([enum_to_text(ore_type) for ore_type in OreTypes])
-        self.pillarFormulaComboBox.addItems([enum_to_text(formula, "-") for formula in PillarFormula])
+        self.locationCombo.addItems([enum_to_text(country) for country in Countries])
+        self.oreTypeCombo.addItems([enum_to_text(ore_type) for ore_type in OreTypes])
+        self.pillarFormulaCombo.addItems([enum_to_text(formula, "-") for formula in PillarFormula])
         self.projectNameLineEdit.setText("New RAP Project")
         self.projectNameLineEdit.selectAll()
 
@@ -101,42 +104,24 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         current_page = self.currentId()
         if current_page == 3:
             return -1
-        elif current_page == 1 and self.stateRadio.isChecked():
+        elif current_page == 1 and self.redesignRadio.isChecked():
             return 3
         else:
             return current_page + 1
 
-    def get_data(self):
-        # Page 1 Data
-        project_name = self.projectNameLineEdit.text()
-        str_loc = self.locationComboBox.currentText()
+    def get_dynamic_combo_data(self):
+        str_loc = self.locationCombo.currentText()
         location = text_to_enum(Countries, str_loc)
-        str_ore__type = self.oreTypeComboBox.currentText()
+        str_ore__type = self.oreTypeCombo.currentText()
         ore_type = text_to_enum(OreTypes, str_ore__type)
-        min_extraction = self.minExtractionSpinBox.value()
-        room_span = self.roomWidthSpinBox.value()
-        drill_blast = self.drillBlastRadio.isChecked()
-        # Page 2 Data
-        sample_height = self.sampleHeightDoubleSpinBox.value()
-        sample_diameter = self.sampleDiameterDoubleSpinBox.value()
-        sample_strength = self.uniaxStrengthDoubleSpinBox.value()
-        is_cylinder = self.cylindricalSampleRadio.isChecked()
-
-        cohesion = self.cohesionDoubleSpinBox.value()
-        rmr = self.rmrSpinBox.value()
-        friction_angle = self.frictionAngleDoubleSpinBox.value()
-
-        depth = self.oreDepthDoubleSpin.value()
-        overburden_sg = self.overburdenDensityDoubleSpinBox.value()
-        seam_dip = self.seamDipDoubleSpin.value()
-        seam_height = self.seamHeightDoubleSpin.value()
-
-        sample = Sample(sample_strength, sample_height, sample_diameter, is_cylinder)
-        pillar = Pillar(sample, seam_height, 0)
+        value = (location, ore_type)
 
         if self.redesignRadio.isChecked():
-            formula = text_to_enum(PillarFormula, self.pillarFormulaComboBox.currentText())
+            formula = text_to_enum(PillarFormula, self.pillarFormulaCombo.currentText(), "_")
             k, a, b = self.get_constants()
+            value = (location, ore_type, (formula, k, a, b))
+
+        return value
 
 
 def main():

@@ -1,15 +1,29 @@
+from __future__ import absolute_import
+
 import sys
 
 from qtpy.QtGui import *
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
-
 import qtawesome as qta
 
-try:
-    from .wizard import ProjectWizard
-except (SystemError, ValueError) as e:
+if __name__ == "__main__":
+    sys.path.append("../rpm/")
     from wizard import ProjectWizard
+    from wizard import enum_to_text
+    from wizard import text_to_enum
+    from dlg import *
+    from __init__ import (unit_reg, Q_)
+    from rpm_oop import Sample
+else:
+    from .wizard import ProjectWizard
+    from .dlg import *
+    from .wizard import enum_to_text
+    from .wizard import text_to_enum
+    from . import unit_reg, Q_
+    from rpm.rpm_oop import *
+    from rpm.constants import (Countries, PillarFormula, OreTypes)
+
 
 
 class MineRapper(QMainWindow):
@@ -21,6 +35,11 @@ class MineRapper(QMainWindow):
         self.setGeometry(QRect(100, 100, 800, 600))
         self.setWindowTitle(QApplication.applicationName())
         self.setWindowIcon(QIcon("icon.png"))
+        self.pillar = None
+        self.room = None
+
+        # set to True when any data is modified
+        self.dirty = False
 
     def create_children(self):
         self.status_bar = self.statusBar()
@@ -64,12 +83,13 @@ class MineRapper(QMainWindow):
                                         tip="Create a new RAP project.", icn_options={"color": "black"},
                                         slot=self.new_project)
         info_action = self.create_action("&About", icon="fa.info-circle", shortcut="Shift + A", tip="About Mine RAPPa",
-                                         icn_options={"color": "black"})
+                                         slot=self.about, icn_options={"color": "black"})
         save_action = self.create_action("&Save", icon="fa.save", shortcut=QKeySequence.Save, tip="Save RAP Project",
-                                         icn_options={"color": "black"})
+                                         slot=self.save, icn_options={"color": "black"})
         graph_action = self.create_action("&Sensitivity", icon="fa.line-chart",
                                           tip="Sensitivity Analysis for current plan", icn_options={})
-        export_action = self.create_action("&Export Results", icon="fa.file-pdf-o", tip="Export results", icn_options={})
+        export_action = self.create_action("&Export Results", icon="fa.file-pdf-o", tip="Export results",
+                                           slot=self.export, icn_options={})
         config_action = self.create_action("&Settings", icon="fa.cog", tip="Change settings", icn_options={})
         all_tools.addActions([new_action, save_action])
         all_tools.addSeparator()
@@ -80,6 +100,45 @@ class MineRapper(QMainWindow):
     def new_project(self):
         wizard = ProjectWizard(self)
         wizard.exec_()
+        project_name = wizard.projectNameLineEdit.text()
+        # str_loc = wizard.locationComboBox.currentText()
+        # location = text_to_enum(Countries, str_loc)
+        # str_ore__type = wizard.oreTypeComboBox.currentText()
+        # ore_type = text_to_enum(OreTypes, str_ore__type)
+        min_extraction = wizard.minExtractionSpin.value()
+        room_span = wizard.roomWidthSpin.value()
+        drill_blast = wizard.drillBlastRadio.isChecked()
+        # Page 2 Data
+        sample_height = wizard.sampleHeightSpin.value()
+        sample_diameter = wizard.sampleDiameterSpin.value()
+        sample_strength = wizard.uniaxStrengthSpin.value()
+        is_cylinder = wizard.cylindricalSampleRadio.isChecked()
+
+        cohesion = wizard.cohesionSpin.value()
+        rmr = wizard.rmrSpin.value()
+        friction_angle = wizard.frictionAngleSpin.value()
+
+        depth = wizard.oreDepthSpin.value()
+        overburden_sg = wizard.overburdenDensitySpin.value()
+        seam_dip = wizard.seamDipSpin.value()
+        seam_height = wizard.seamHeightSpin.value()
+
+        combo_data = wizard.get_dynamic_combo_data()
+
+        sample = Sample(sample_strength, sample_height, sample_diameter, is_cylinder)
+        pillar = Pillar(sample, seam_height, 0)
+
+    def save(self):
+        if not self.dirty:
+            return
+        pass
+
+    def export(self, format=None):
+        pass
+
+    def about(self):
+        about_dlg = AboutDialog(self)
+        about_dlg.show()
 
 
 class RapparApp(QApplication):
