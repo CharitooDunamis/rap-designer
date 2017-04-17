@@ -12,3 +12,6 @@
 
 # Other files
 *.ui
+
+# Hidden files
+.*/
