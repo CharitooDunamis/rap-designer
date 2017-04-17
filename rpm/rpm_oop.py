@@ -3,6 +3,7 @@ import math
 
 # from .rpm_functions import *
 from .utils import *
+from gui_ import (Q_, NamedQuantity)
 
 
 class Solid(object):
@@ -21,9 +22,13 @@ class Solid(object):
         :param length: the length of the bounding cube/cuboid
         :param width: the width of the bounding cube/cuboid
         """
-        self.height = max(0, height)
-        self.length = max(0, length)
-        self.width = width or self.length
+
+        self.height = max(0, height.magnitude)
+        self.length = max(0, length.magnitude)
+        if width:
+            self.width = max(0, width.magnitude)
+        else:
+            self.width = self.length
 
     def is_square(self):
         """Returns True if the solid has a square cross-section"""
@@ -44,7 +49,7 @@ class Pillar(Solid):
         :param length: length of the pillar
         :param width: width of the pillar
         """
-        assert isinstance(sample, Sample) is True
+        assert isinstance(sample, Sample)
         self.sample = sample
         super(Pillar, self).__init__(height, length, width)
 
@@ -85,7 +90,7 @@ class Sample(Solid):
 
     @property
     def cubical_strength(self):
-        if self.height > 36:
+        if self.height > Q_("36 inch"):
             strength = self.gaddy_factor / 6
         else:
             strength = self.gaddy_factor / math.sqrt(self.height)
@@ -124,5 +129,3 @@ class StrengthFormula(object):
         self.beta = beta
         self.k_type = k_type
         self.category = category
-
-

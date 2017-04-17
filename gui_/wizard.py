@@ -3,7 +3,7 @@ from __future__ import generators
 from __future__ import absolute_import
 
 import sys
-from os.path import (dirname, abspath, join)
+from os.path import (dirname, join)
 from qtpy.QtGui import *
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
@@ -18,7 +18,7 @@ else:
     from . import wizard_ui
 
 from rpm.constants import (PillarFormula, OreTypes, Countries)
-from rpm.rpm_oop import (Sample, Pillar)
+# from rpm.rpm_oop import (Sample, Pillar)
 
 
 def text_to_enum(enum, text, sep=" "):
@@ -49,14 +49,14 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         super(ProjectWizard, self).__init__(parent)
         self.setupUi(self)
         self._configure_widgets()
-        watermark = QPixmap(join(WIZARD_DIR,"watermark.jpg"))
+        self._bindings()
+        self.update_constant()
+        watermark = QPixmap(join(WIZARD_DIR,"watermark.png"))
         logo = QPixmap(join(WIZARD_DIR, "icon.png"))
         self.setPixmap(QWizard.LogoPixmap, logo)
         self.setPixmap(QWizard.WatermarkPixmap, watermark)
         self.setOption(QWizard.ExtendedWatermarkPixmap)
         self.setMinimumSize(QSize(650, 500))
-        self._bindings()
-        self.update_constant()
         self.setWindowTitle("New RAP Project Wizard")
 
     def _bindings(self):
@@ -92,11 +92,16 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         self.geoPage.setSubTitle("Geotechnical & Geological Details")
         self.pillarStrengthPage.setTitle("Pillar Strength Formula")
         self.pillarStrengthPage.setSubTitle("Pillar Strength Formula")
+
         self.locationCombo.addItems([enum_to_text(country) for country in Countries])
+        self.locationCombo.setEditable(False)
         self.oreTypeCombo.addItems([enum_to_text(ore_type) for ore_type in OreTypes])
+        self.oreTypeCombo.setEditable(False)
         self.pillarFormulaCombo.addItems([enum_to_text(formula, "-") for formula in PillarFormula])
         self.projectNameLineEdit.setText("New RAP Project")
         self.projectNameLineEdit.selectAll()
+        self.drillBlastRadio.setChecked(True)
+        self.cylindricalSampleRadio.setChecked(True)
 
     def nextId(self, *args, **kwargs):
         """For room and pillar systems that are being designed for the first time there is limited
@@ -104,24 +109,24 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         current_page = self.currentId()
         if current_page == 3:
             return -1
-        elif current_page == 1 and self.redesignRadio.isChecked():
+        elif current_page == 1 and self.initialDesignRadio.isChecked():
             return 3
         else:
             return current_page + 1
 
-    def get_dynamic_combo_data(self):
-        str_loc = self.locationCombo.currentText()
-        location = text_to_enum(Countries, str_loc)
-        str_ore__type = self.oreTypeCombo.currentText()
-        ore_type = text_to_enum(OreTypes, str_ore__type)
-        value = (location, ore_type)
-
-        if self.redesignRadio.isChecked():
-            formula = text_to_enum(PillarFormula, self.pillarFormulaCombo.currentText(), "_")
-            k, a, b = self.get_constants()
-            value = (location, ore_type, (formula, k, a, b))
-
-        return value
+    # def get_dynamic_combo_data(self):
+    #     str_loc = self.locationCombo.currentText()
+    #     location = text_to_enum(Countries, str_loc)
+    #     str_ore__type = self.oreTypeCombo.currentText()
+    #     ore_type = text_to_enum(OreTypes, str_ore__type)
+    #     value = (location, ore_type)
+    #
+    #     if self.redesignRadio.isChecked():
+    #         formula = text_to_enum(PillarFormula, self.pillarFormulaCombo.currentText(), "-")
+    #         k, a, b = self.get_constants()
+    #         value = (location, ore_type, (formula, k, a, b))
+    #
+    #     return value
 
 
 def main():

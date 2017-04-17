@@ -7,45 +7,68 @@ from qtpy.QtCore import *
 from qtpy.QtWidgets import *
 import qtawesome as qta
 
-if __name__ == "__main__":
-    sys.path.append("../rpm/")
-    from wizard import ProjectWizard
-    from wizard import enum_to_text
-    from wizard import text_to_enum
-    from dlg import *
-    from __init__ import (unit_reg, Q_)
-    from rpm_oop import Sample
-else:
-    from .wizard import ProjectWizard
-    from .dlg import *
-    from .wizard import enum_to_text
-    from .wizard import text_to_enum
-    from . import unit_reg, Q_
-    from rpm.rpm_oop import *
-    from rpm.constants import (Countries, PillarFormula, OreTypes)
+from .wizard import ProjectWizard
+from .dialogs import *
+from .wizard import enum_to_text
+from .wizard import text_to_enum
+from . import (unit_reg, Q_, NamedQuantity, NamedStr, NamedInt, NamedFloat)
+from rpm.rpm_oop import *
+from rpm.constants import (Countries, PillarFormula, OreTypes)
 
+
+def spin_to_named_quantity(spin_widget, name=None):
+    magnitude = spin_widget.value()
+    unit = spin_widget.suffix() if spin_widget.suffix() else ""
+    string = "{} {}".format(magnitude, unit)
+    return NamedQuantity(string.strip(), name=name)
 
 
 class MineRapper(QMainWindow):
 
     def __init__(self, parent=None):
         super(MineRapper, self).__init__(parent)
-        self.create_children()
         self.setMinimumSize(QSize(400, 300))
         self.setGeometry(QRect(100, 100, 800, 600))
         self.setWindowTitle(QApplication.applicationName())
         self.setWindowIcon(QIcon("icon.png"))
-        self.pillar = None
-        self.room = None
 
-        # set to True when any data is modified
-        self.dirty = False
-
-    def create_children(self):
+        # Children
+        self.wiz = ProjectWizard()
         self.status_bar = self.statusBar()
         self.create_toolbars()
         self.canvas = QGraphicsView(self)
         self.setCentralWidget(self.canvas)
+
+        # DATA
+        self.pillar = None
+        self.projectName = None
+        self.designType = None
+        self.roomWidth = None
+        self.location = None
+        self.oreType = None
+        self.roomSpan = None
+        self.minExtraction = None
+        self.fragmentMethod = None
+
+        self.frictionAngle = None
+        self.cohesion = None
+        self.rmr = None
+        self.seamHeight = None
+        self.seamDip = None
+        self.mineDepth = None
+        self.floorDensity = None
+        self.overburdenDensity = None
+        self.pillarFormula = None
+
+        # set to True when any data is modified
+        self.dirty = False
+        # set to True when the system has data to work with
+        self.hasData = False
+        self.bindings()
+
+
+    def bindings(self):
+        self.connect(self.wiz, SIGNAL("finished(int)"), self.get_wiz_data)
 
     def create_action(self, text, slot=None, icon=None, shortcut=None, tip=None, checkable=False, signal='triggered()',
                       icn_options=None):
@@ -98,35 +121,40 @@ class MineRapper(QMainWindow):
         all_tools.addActions([config_action, info_action])
 
     def new_project(self):
-        wizard = ProjectWizard(self)
-        wizard.exec_()
-        project_name = wizard.projectNameLineEdit.text()
-        # str_loc = wizard.locationComboBox.currentText()
-        # location = text_to_enum(Countries, str_loc)
-        # str_ore__type = wizard.oreTypeComboBox.currentText()
-        # ore_type = text_to_enum(OreTypes, str_ore__type)
-        min_extraction = wizard.minExtractionSpin.value()
-        room_span = wizard.roomWidthSpin.value()
-        drill_blast = wizard.drillBlastRadio.isChecked()
+        self.wiz.exec_()
+
+    def get_wiz_data(self):
+        self.projectName = self.wiz.projectNameLineEdit.text()
+        str_loc = self.wiz.locationCombo.currentText()
+        str_ore__type = self.wiz.oreTypeCombo.currentText()
+        self.location = text_to_enum(Countries, str_loc)
+        self.oreType = text_to_enum(OreTypes, str_ore__type)
+
+        self.roomSpan = spin_to_named_quantity(self.wiz.roomWidthSpin, name="Room Span")
+        self.minExtraction = spin_to_named_quantity(self.wiz.minExtractionSpin, name="Minimum Extraction")
+
+        fragmentation = "Drill Blast" if self.wiz.drillBlastRadio.isChecked() else "Continuous Miner"
+        self.fragmentMethod = NamedStr(fragmentation, name="Method of Fragmenting")
+
         # Page 2 Data
-        sample_height = wizard.sampleHeightSpin.value()
-        sample_diameter = wizard.sampleDiameterSpin.value()
-        sample_strength = wizard.uniaxStrengthSpin.value()
-        is_cylinder = wizard.cylindricalSampleRadio.isChecked()
+        sample_height = spin_to_named_quantity(self.wiz.sampleHeightSpin, name="Sample Height")
+        sample_diameter = spin_to_named_quantity(self.wiz.sampleDiameterSpin, name="Sample Diameter")
+        sample_strength = spin_to_named_quantity(self.wiz.uniaxStrengthSpin, name="Sample Strength")
+        is_cylinder = self.wiz.cylindricalSampleRadio.isChecked()
 
-        cohesion = wizard.cohesionSpin.value()
-        rmr = wizard.rmrSpin.value()
-        friction_angle = wizard.frictionAngleSpin.value()
+        self.frictionAngle = NamedInt(self.wiz.frictionAngleSpin.value(), name="Friction Angle")
+        self.cohesion = spin_to_named_quantity(self.wiz.cohesionSpin, name="Cohesion")
+        self.rmr = spin_to_named_quantity(self.wiz.rmrSpin, name="RMR")
 
-        depth = wizard.oreDepthSpin.value()
-        overburden_sg = wizard.overburdenDensitySpin.value()
-        seam_dip = wizard.seamDipSpin.value()
-        seam_height = wizard.seamHeightSpin.value()
-
-        combo_data = wizard.get_dynamic_combo_data()
+        self.seamHeight = spin_to_named_quantity(self.wiz.seamHeightSpin, name="Seam Height")
+        self.seamDip = NamedInt(self.wiz.seamDipSpin.value(), name="Seam Dip")
+        self.mineDepth = spin_to_named_quantity(self.wiz.oreDepthSpin, name="Mine Depth")
+        self.floorDensity = NamedFloat(self.wiz.floorDensitySpin.value(), name="Specific Gravity of Floor")
+        self.overburdenDensity = NamedFloat(self.wiz.overburdenDensitySpin.value(),
+                                            name="Specific Gravity of Overburden")
 
         sample = Sample(sample_strength, sample_height, sample_diameter, is_cylinder)
-        pillar = Pillar(sample, seam_height, 0)
+        self.pillar = Pillar(sample, self.seamHeight, 0)
 
     def save(self):
         if not self.dirty:

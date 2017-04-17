@@ -30,37 +30,16 @@ def meters_to_feet(meters):
     return meters * METER_FEET
 
 
-class NumberWrapper(object):
+class StrVariable(str):
 
-    def __init__(self, value=0.0):
-        self.value = value
+    def __new__(cls, value="", name=None, *args, **kwargs):
+        string = str.__new__(cls, value)
+        string.name = name
+        return string
 
-    def __add__(self, other):
-        return self.value + other.value
-
-    def __sub__(self, other):
-        return self.value - other.value
-
-    def __mul__(self, other):
-        return self.value - other.value
-
-    def __truediv__(self, other):
-        return self.value / other.value
-
-    def __eq__(self, other):
-        return self.value == other.value
-
-    def __ne__(self, other):
-        return self.value != other.value
-
-    def __gt__(self, other):
-        return self.value > other.value
-
-    def __lt__(self, other):
-        return self.value < other.value
-
-    def __le__(self, other):
-        return self.value <= other.value
+    def __init__(self, value="", encoding='utf8', errors='strict', name=None):
+        super(StrVariable, self).__init__(object=value, encoding=encoding, errors=errors)
+        self.name = name
 
 
 class Slave(object):
