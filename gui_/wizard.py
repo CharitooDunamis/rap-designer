@@ -17,7 +17,7 @@ if __name__ == '__main__':
 else:
     from . import wizard_ui
 
-from rpm.constants import (PillarFormula, OreTypes, Countries)
+from rpm.constants import (ALL_FORMULA, OreTypes, Countries)
 # from rpm.rpm_oop import (Sample, Pillar)
 
 
@@ -43,6 +43,14 @@ def enum_to_text(enum, sep=" "):
     return enum_name.replace("_", sep).title()
 
 
+def name_to_formula(name):
+
+    for formula in ALL_FORMULA:
+        if formula.name == name:
+            return formula
+    raise ValueError("No formula called {}".format(name))
+
+
 class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
 
     def __init__(self, parent=None):
@@ -58,22 +66,26 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         self.setOption(QWizard.ExtendedWatermarkPixmap)
         self.setMinimumSize(QSize(650, 500))
         self.setWindowTitle("New RAP Project Wizard")
+        if parent:
+            self.setWindowIcon(parent.windowIcon())
+            self.center_on_parent(parent)
 
     def _bindings(self):
         self.connect(self.pillarFormulaCombo, SIGNAL("currentIndexChanged(QString)"), self.update_constant)
 
+    def center_on_parent(self, parent):
+        qr = self.frameGeometry()
+        cp = parent.frameGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
     def update_constant(self):
-        k, a, b = 0, 0, 0
-        form_text = self.pillarFormulaCombo.currentText()
-        enum = text_to_enum(PillarFormula, form_text, sep="-")
-        try:
-            k, a, b = enum.value
-            self.constantKSpin.setEnabled(True)
-        except ValueError as e:
-            a, b = enum.value
-            k = 0
-            self.constantKSpin.setEnabled(False)
-        self.constantKSpin.setValue(k)
+        formula_name = self.pillarFormulaCombo.currentText()
+        formula = name_to_formula(formula_name)
+        k, a, b = formula.k, formula.alpha, formula.beta
+        self.constantKSpin.setEnabled(k is not None)
+        if self.constantKSpin.isEnabled():
+            self.constantKSpin.setValue(k)
         self.constantASpin.setValue(a)
         self.constantBSpin.setValue(b)
 
@@ -97,11 +109,12 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         self.locationCombo.setEditable(False)
         self.oreTypeCombo.addItems([enum_to_text(ore_type) for ore_type in OreTypes])
         self.oreTypeCombo.setEditable(False)
-        self.pillarFormulaCombo.addItems([enum_to_text(formula, "-") for formula in PillarFormula])
+        self.pillarFormulaCombo.addItems([formula.name for formula in ALL_FORMULA])
         self.projectNameLineEdit.setText("New RAP Project")
         self.projectNameLineEdit.selectAll()
         self.drillBlastRadio.setChecked(True)
         self.cylindricalSampleRadio.setChecked(True)
+        self.constantKSpin.setRange(1.0, 5000.0)
 
     def nextId(self, *args, **kwargs):
         """For room and pillar systems that are being designed for the first time there is limited

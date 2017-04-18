@@ -1,18 +1,18 @@
 import pytest
 
 from rpm.rpm_oop import Sample
-from gui_ import Q_
+from rpm import Q_
 
 
 @pytest.fixture
 def sample(request):
-    return Sample(strength=Q_(5.2), height=Q_(0.4), diameter=Q_(0.12))
+    return Sample(strength=Q_("5.2MPa"), height=Q_("0.4inches"), diameter=Q_("0.12inches"))
 
 
 @pytest.fixture
 def c_sample(request):
     """Returns a cylindrical sample"""
-    return Sample(strength=Q_(5.2), height=Q_(0.4), diameter=Q_(0.12), cylindrical=True)
+    return Sample(strength=Q_("5.2m"), height=Q_("0.4m"), diameter=Q_("0.12m"), cylindrical=True)
 
 
 def test_diameter_is_an_alias_for_length_of_samples(sample):
@@ -24,12 +24,12 @@ def test_non_cubical_sample_returns_false_for_is_cubical_method(sample):
 
 
 def test_cubical_sample_returns_true_for_is_cubical_method():
-    sample = Sample(strength=Q_(5.2), height=Q_(0.2), diameter=Q_(0.2))
+    sample = Sample(strength=Q_("5.2m"), height=Q_("0.2m"), diameter=Q_("0.2m"))
     assert sample.is_cubical()
 
 
 def test_cylindrical_sample_returns_correct_volume(c_sample):
-    assert round(c_sample.volume, 6) == 0.004524
+    assert round(c_sample.volume.magnitude, 6) == 0.004524
 
 
 def test_non_cylindrical_sample_return_correct_volume(sample):

@@ -11,16 +11,35 @@ from .wizard import ProjectWizard
 from .dialogs import *
 from .wizard import enum_to_text
 from .wizard import text_to_enum
-from . import (unit_reg, Q_, NamedQuantity, NamedStr, NamedInt, NamedFloat)
+from rpm import (ZERO_LENGTH, DimensionalityError, unit_reg)
+from rpm.utils import (NamedStr, NamedInt, NamedFloat)
 from rpm.rpm_oop import *
-from rpm.constants import (Countries, PillarFormula, OreTypes)
+from rpm.constants import (Countries, ALL_FORMULA, OreTypes)
 
 
-def spin_to_named_quantity(spin_widget, name=None):
+UNICODE_UNITS = {
+    "°": "degree",
+    "lb/ft³": "pound per foot ** 3",
+    "%": " ",
+}
+
+
+def named_quantity_from_spin(spin_widget, name=None):
     magnitude = spin_widget.value()
-    unit = spin_widget.suffix() if spin_widget.suffix() else ""
-    string = "{} {}".format(magnitude, unit)
-    return NamedQuantity(string.strip(), name=name)
+    unit = spin_widget.suffix().strip()
+    unit = UNICODE_UNITS.get(unit, None) or unit
+    try:
+        unit = unit_reg(unit)
+    # AttributeError for when unit is None or NoneType
+    except (DimensionalityError, AttributeError) as e:
+        # print(e)
+        unit = None
+    quantity = Q_(magnitude)
+    if unit:
+        quantity *= unit
+    quantity.name = name
+    print(quantity.name, ":", quantity)
+    return quantity
 
 
 class MineRapper(QMainWindow):
@@ -30,42 +49,26 @@ class MineRapper(QMainWindow):
         self.setMinimumSize(QSize(400, 300))
         self.setGeometry(QRect(100, 100, 800, 600))
         self.setWindowTitle(QApplication.applicationName())
-        self.setWindowIcon(QIcon("icon.png"))
+        self.setWindowIcon(QIcon("gui_/icon.png"))
 
         # Children
-        self.wiz = ProjectWizard()
+        self.wiz = ProjectWizard(self)
         self.status_bar = self.statusBar()
         self.create_toolbars()
         self.canvas = QGraphicsView(self)
         self.setCentralWidget(self.canvas)
 
-        # DATA
-        self.pillar = None
-        self.projectName = None
-        self.designType = None
-        self.roomWidth = None
-        self.location = None
-        self.oreType = None
-        self.roomSpan = None
-        self.minExtraction = None
-        self.fragmentMethod = None
-
-        self.frictionAngle = None
-        self.cohesion = None
-        self.rmr = None
-        self.seamHeight = None
-        self.seamDip = None
-        self.mineDepth = None
-        self.floorDensity = None
-        self.overburdenDensity = None
-        self.pillarFormula = None
-
+        self.rpm = None
         # set to True when any data is modified
         self.dirty = False
-        # set to True when the system has data to work with
-        self.hasData = False
         self.bindings()
+        self.center_on_screen()
+        self.update_interface()
 
+    @property
+    def has_data(self):
+        """Does the system has any data to work with"""
+        return self.rpm is not None
 
     def bindings(self):
         self.connect(self.wiz, SIGNAL("finished(int)"), self.get_wiz_data)
@@ -102,59 +105,71 @@ class MineRapper(QMainWindow):
         all_tools = self.addToolBar("Main")
         all_tools.setObjectName("MainToolbar")
         all_tools.setIconSize(QSize(32, 32))
-        new_action = self.create_action("&New", icon='fa.file-text', shortcut=QKeySequence.New,
+        self.new_action = self.create_action("&New", icon='fa.file-text', shortcut=QKeySequence.New,
                                         tip="Create a new RAP project.", icn_options={"color": "black"},
                                         slot=self.new_project)
-        info_action = self.create_action("&About", icon="fa.info-circle", shortcut="Shift + A", tip="About Mine RAPPa",
+        self.info_action = self.create_action("&About", icon="fa.info-circle", shortcut="Shift + A", tip="About Mine RAPPa",
                                          slot=self.about, icn_options={"color": "black"})
-        save_action = self.create_action("&Save", icon="fa.save", shortcut=QKeySequence.Save, tip="Save RAP Project",
+        self.save_action = self.create_action("&Save", icon="fa.save", shortcut=QKeySequence.Save, tip="Save RAP Project",
                                          slot=self.save, icn_options={"color": "black"})
-        graph_action = self.create_action("&Sensitivity", icon="fa.line-chart",
+        self.graph_action = self.create_action("&Sensitivity", icon="fa.line-chart",
                                           tip="Sensitivity Analysis for current plan", icn_options={})
-        export_action = self.create_action("&Export Results", icon="fa.file-pdf-o", tip="Export results",
+        self.export_action = self.create_action("&Export Results", icon="fa.file-pdf-o", tip="Export results",
                                            slot=self.export, icn_options={})
-        config_action = self.create_action("&Settings", icon="fa.cog", tip="Change settings", icn_options={})
-        all_tools.addActions([new_action, save_action])
+        self.config_action = self.create_action("&Settings", icon="fa.cog", tip="Change settings", icn_options={})
+        all_tools.addActions([self.new_action, self.save_action])
         all_tools.addSeparator()
-        all_tools.addActions([export_action, graph_action])
+        all_tools.addActions([self.export_action, self.graph_action])
         all_tools.addSeparator()
-        all_tools.addActions([config_action, info_action])
+        all_tools.addActions([self.config_action, self.info_action])
+
+    def update_interface(self):
+        has_data = self.has_data
+        data_dependent_ui = [self.save_action, self.graph_action, self.export_action, self.graph_action]
+        for component in data_dependent_ui:
+            component.setEnabled(has_data)
 
     def new_project(self):
         self.wiz.exec_()
 
     def get_wiz_data(self):
-        self.projectName = self.wiz.projectNameLineEdit.text()
+        rpm = RoomAndPillar()
+        project_name = self.wiz.projectNameLineEdit.text()
+        rpm.projectName = NamedStr(project_name, name="Project Name")
         str_loc = self.wiz.locationCombo.currentText()
         str_ore__type = self.wiz.oreTypeCombo.currentText()
-        self.location = text_to_enum(Countries, str_loc)
-        self.oreType = text_to_enum(OreTypes, str_ore__type)
+        rpm.location = text_to_enum(Countries, str_loc)
+        rpm.oreType = text_to_enum(OreTypes, str_ore__type)
 
-        self.roomSpan = spin_to_named_quantity(self.wiz.roomWidthSpin, name="Room Span")
-        self.minExtraction = spin_to_named_quantity(self.wiz.minExtractionSpin, name="Minimum Extraction")
+        rpm.roomSpan = named_quantity_from_spin(self.wiz.roomWidthSpin, name="Room Span")
+        rpm.minExtraction = named_quantity_from_spin(self.wiz.minExtractionSpin, name="Minimum Extraction")
 
         fragmentation = "Drill Blast" if self.wiz.drillBlastRadio.isChecked() else "Continuous Miner"
-        self.fragmentMethod = NamedStr(fragmentation, name="Method of Fragmenting")
+        rpm.fragmentMethod = NamedStr(fragmentation, name="Method of Fragmenting")
 
         # Page 2 Data
-        sample_height = spin_to_named_quantity(self.wiz.sampleHeightSpin, name="Sample Height")
-        sample_diameter = spin_to_named_quantity(self.wiz.sampleDiameterSpin, name="Sample Diameter")
-        sample_strength = spin_to_named_quantity(self.wiz.uniaxStrengthSpin, name="Sample Strength")
+        sample_height = named_quantity_from_spin(self.wiz.sampleHeightSpin, name="Sample Height")
+        sample_diameter = named_quantity_from_spin(self.wiz.sampleDiameterSpin, name="Sample Diameter")
+        sample_strength = named_quantity_from_spin(self.wiz.uniaxStrengthSpin, name="Sample Strength")
         is_cylinder = self.wiz.cylindricalSampleRadio.isChecked()
 
-        self.frictionAngle = NamedInt(self.wiz.frictionAngleSpin.value(), name="Friction Angle")
-        self.cohesion = spin_to_named_quantity(self.wiz.cohesionSpin, name="Cohesion")
-        self.rmr = spin_to_named_quantity(self.wiz.rmrSpin, name="RMR")
+        rpm.frictionAngle = named_quantity_from_spin(self.wiz.frictionAngleSpin, name="Friction Angle")
+        rpm.cohesion = named_quantity_from_spin(self.wiz.cohesionSpin, name="Cohesion")
+        rpm.rmr = named_quantity_from_spin(self.wiz.rmrSpin, name="RMR")
 
-        self.seamHeight = spin_to_named_quantity(self.wiz.seamHeightSpin, name="Seam Height")
-        self.seamDip = NamedInt(self.wiz.seamDipSpin.value(), name="Seam Dip")
-        self.mineDepth = spin_to_named_quantity(self.wiz.oreDepthSpin, name="Mine Depth")
-        self.floorDensity = NamedFloat(self.wiz.floorDensitySpin.value(), name="Specific Gravity of Floor")
-        self.overburdenDensity = NamedFloat(self.wiz.overburdenDensitySpin.value(),
+        rpm.seamHeight = named_quantity_from_spin(self.wiz.seamHeightSpin, name="Seam Height")
+        rpm.seamDip = named_quantity_from_spin(self.wiz.seamDipSpin, name="Seam Dip")
+        rpm.mineDepth = named_quantity_from_spin(self.wiz.oreDepthSpin, name="Mine Depth")
+        rpm.floorDensity = NamedFloat(self.wiz.floorDensitySpin.value(), name="Specific Gravity of Floor")
+        rpm.overburdenDensity = NamedFloat(self.wiz.overburdenDensitySpin.value(),
                                             name="Specific Gravity of Overburden")
-
+        print(sample_height)
         sample = Sample(sample_strength, sample_height, sample_diameter, is_cylinder)
-        self.pillar = Pillar(sample, self.seamHeight, 0)
+        zero_pillar_length = ZERO_LENGTH
+        zero_pillar_length.name = "Pillar Length"
+        rpm.pillar = Pillar(sample, rpm.seamHeight, zero_pillar_length)
+        self.rpm = rpm
+        self.update_interface()
 
     def save(self):
         if not self.dirty:
@@ -167,6 +182,12 @@ class MineRapper(QMainWindow):
     def about(self):
         about_dlg = AboutDialog(self)
         about_dlg.show()
+
+    def center_on_screen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
 
 class RapparApp(QApplication):

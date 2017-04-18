@@ -1,6 +1,6 @@
 import pytest
 
-from gui_ import (NamedQuantity, NamedStr, NamedInt, NamedFloat)
+from rpm.utils import (NamedStr, NamedInt, NamedFloat)
 
 
 @pytest.fixture
@@ -16,20 +16,6 @@ def named_float(request):
 @pytest.fixture
 def named_string(request):
     return NamedStr("Michael", name="Candidate 1")
-
-
-def test_initialization_of_named_quantity():
-    me = NamedQuantity("3.4cm")
-
-
-def test_setting_name_of_named_quantity():
-    first = NamedQuantity("3.4", name="First")
-    assert first.name == "First"
-
-
-def test_representation_of_named_quantity():
-    second = NamedQuantity("3cm", name="Second")
-    assert repr(second) == "Second: 3 centimeter dimensionless"
 
 # ------------ NAMED STRING TESTS ----------------------
 

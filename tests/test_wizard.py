@@ -63,7 +63,7 @@ def test_ore_type_combo_has_correct_number_of_items(wizard):
 
 def test_pillar_formula_combo_has_correct_number_of_items(wizard):
     wizard = ProjectWizard()
-    item_no = len(PillarFormula)
+    item_no = len(ALL_FORMULA)
     for i in range(item_no):
         wizard.pillarFormulaCombo.setCurrentIndex(i)
         assert wizard.pillarFormulaCombo.currentText() != ""

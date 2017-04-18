@@ -5,6 +5,10 @@ import math
 from .constants import *
 
 
+SALAMON_MUNRO = ALL_FORMULA[1]
+OBERT_DUVAL = ALL_FORMULA[5]
+
+
 def pre_mining_field_stress(unit_weight, height):
     return unit_weight * height
 
@@ -60,19 +64,19 @@ def cmri(uniaxial, height, depth, width):
 
 
 def hardy_agapito(uniaxial, pillar_sample_vol_ratio,
-                  pillar_width_height_ratio, sample_height_width_ratio, constants=None):
-    a, b = constants if constants else PillarFormula.salamon_munro.value
+                  pillar_width_height_ratio, sample_height_width_ratio, formula=None):
+    k, a, b = formula.constants if formula else SALAMON_MUNRO.constants
     first_portion = uniaxial * pillar_sample_vol_ratio ** a
     second_portion = (pillar_width_height_ratio * sample_height_width_ratio) ** b
     return first_portion * second_portion
 
 
-def salamon(width, height, constants=None):
-    k, a, b = constants if constants else PillarFormula.salamon_munro.value
+def salamon(width, height, formula=None):
+    k, a, b = formula.constants if formula else SALAMON_MUNRO.constants
     return expo_pillar_strength(k, width, a, height, b)
 
 
-def bieniawski(cubic_strength, width, height):
+def bieniawski(cubic_strength, width, height, formula=None):
     """
     :param cubic_strength: strength of cubic sample
     :param width: width of pillar
@@ -169,8 +173,8 @@ def shape_factor_g(friction_angle, pillar_width, pillar_length):
     return 1.0 + (a * b)
 
 
-def max_tensile_stress(sample_unit_weight, span, roof_thickness, constants=PillarFormula.obert_duval):
-    beta = constants[1]
+def max_tensile_stress(sample_unit_weight, span, roof_thickness, constants=OBERT_DUVAL):
+    beta = constants.beta
     return (6 * beta * sample_unit_weight * span ** 2) / roof_thickness
 
 

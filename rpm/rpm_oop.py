@@ -1,9 +1,10 @@
 from __future__ import division
 import math
 
-# from .rpm_functions import *
-from .utils import *
-from gui_ import (Q_, NamedQuantity)
+from . import (Q_, unit_reg)
+
+
+ZERO_LENGTH = Q_("0.0 metres")
 
 
 class Solid(object):
@@ -23,12 +24,12 @@ class Solid(object):
         :param width: the width of the bounding cube/cuboid
         """
 
-        self.height = max(0, height.magnitude)
-        self.length = max(0, length.magnitude)
-        if width:
-            self.width = max(0, width.magnitude)
-        else:
-            self.width = self.length
+        height = height if height > ZERO_LENGTH else ZERO_LENGTH
+        length = length if length > ZERO_LENGTH else ZERO_LENGTH
+        width = width if width and width > ZERO_LENGTH else ZERO_LENGTH
+        self.height = height
+        self.length = length
+        self.width = width if width else length
 
     def is_square(self):
         """Returns True if the solid has a square cross-section"""
@@ -64,6 +65,10 @@ class Pillar(Solid):
     @property
     def cross_section_area(self):
         return self.length * self.width
+
+    @property
+    def strength(self):
+        return None
 
 
 class Sample(Solid):
@@ -117,15 +122,52 @@ class Sample(Solid):
 
 class RoomAndPillar(object):
 
-    def __init__(self, pillar, room_span):
+    def __init__(self, pillar=None, room_span=None):
+
+        # DATA
         self.pillar = pillar
         self.room_span = room_span
+        self.project_name = None
+        self.design_type = None
+        self.room_width = None
+        self.location = None
+        self.ore_type = None
+        self.minExtraction = None
+        self.fragment_method = None
+
+        self.friction_angle = None
+        self.cohesion = None
+        self.rmr = None
+        self.seam_height = None
+        self.seam_dip = None
+        self.mine_depth = None
+        self.floor_density = None
+        self.overburden_density = None
+        self.pillar_formula = None
 
 
 class StrengthFormula(object):
 
-    def __init__(self, alpha, beta, k_type, category):
+    CUBICAL, UNIAXIAL, GADDY, OTHER = range(4)
+    METRIC, IMPERIAL = range(23283482, 23283484)
+    LINEAR, EXPONENTIAL, ODD = range(4374, 4377)
+
+    def __init__(self, alpha, beta, k_type, fos, category, k=None, name=None):
         self.alpha = alpha
         self.beta = beta
         self.k_type = k_type
         self.category = category
+        self.fos = fos
+        self.k = k
+        self.name = name
+
+        # k should have a value only when k type is other
+        # all the other types are calculated from data
+        # some odd formulas use do not have k defined
+        if self.category != StrengthFormula.ODD:
+            assert ((self.k_type == StrengthFormula.OTHER and k is not None) or
+                   (self.k_type != StrengthFormula.OTHER and k is None))
+
+    @property
+    def constants(self):
+        return self.k, self.alpha, self.beta

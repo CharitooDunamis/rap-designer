@@ -4,7 +4,7 @@ from rpm import rpm_functions as rpmf
 
 def test_salamon_pillar_strength_against_known_values():
     width = height = 5
-    assert round(rpmf.salamon(width, height), 4) == 5.2039
+    assert round(rpmf.salamon(width, height), 4) == 956.7092
 
 
 def test_bieniawski_pillar_strength_against_known_results():
