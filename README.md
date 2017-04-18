@@ -9,5 +9,5 @@ gui_ - Graphical user interface for designing room and pillar systems
 tests - Contains all the tests
 
 ## Contributing
-This is the source code of a software I am creating for my thesis. As
-contributions are only allowed after 1st June, 2017.
+This is the source code of a software I am creating for my thesis.
+Contributions are therefore only allowed after 1st June, 2017.
