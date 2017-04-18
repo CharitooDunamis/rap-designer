@@ -1,32 +1,27 @@
-from __future__ import absolute_import
-
 import sys
 
-from qtpy.QtGui import *
-from qtpy.QtCore import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import (SIGNAL, QSize, QRect)
+from qtpy.QtGui import QKeySequence, QIcon
+from qtpy.QtWidgets import (QAction, QApplication, QDesktopWidget, QGraphicsView, QMainWindow)
 import qtawesome as qta
 
-from .wizard import ProjectWizard
-from .dialogs import *
-from .wizard import enum_to_text
-from .wizard import text_to_enum
-from rpm import (ZERO_LENGTH, DimensionalityError, unit_reg)
-from rpm.utils import (NamedStr, NamedInt, NamedFloat)
-from rpm.rpm_oop import *
+from .dialogs import AboutDialog
+from .wizard import (text_to_enum, ProjectWizard, name_to_formula)
+from rpm import (ZERO_LENGTH, DimensionalityError, unit_reg, Q_)
+from rpm.rpm_oop import (RoomAndPillar, Sample, Pillar, StrengthFormula)
 from rpm.constants import (Countries, ALL_FORMULA, OreTypes)
 
 
 UNICODE_UNITS = {
     "°": "degree",
     "lb/ft³": "pound per foot ** 3",
-    "%": " ",
 }
 
 
-def named_quantity_from_spin(spin_widget, name=None):
+def quantity_from_spin(spin_widget):
     magnitude = spin_widget.value()
     unit = spin_widget.suffix().strip()
+    # pint does not support unicode units
     unit = UNICODE_UNITS.get(unit, None) or unit
     try:
         unit = unit_reg(unit)
@@ -37,8 +32,7 @@ def named_quantity_from_spin(spin_widget, name=None):
     quantity = Q_(magnitude)
     if unit:
         quantity *= unit
-    quantity.name = name
-    print(quantity.name, ":", quantity)
+    # print(quantity)
     return quantity
 
 
@@ -134,41 +128,51 @@ class MineRapper(QMainWindow):
 
     def get_wiz_data(self):
         rpm = RoomAndPillar()
-        project_name = self.wiz.projectNameLineEdit.text()
-        rpm.projectName = NamedStr(project_name, name="Project Name")
+        rpm.project_name = self.wiz.projectNameLineEdit.text()
         str_loc = self.wiz.locationCombo.currentText()
-        str_ore__type = self.wiz.oreTypeCombo.currentText()
+        str_ore_type = self.wiz.oreTypeCombo.currentText()
         rpm.location = text_to_enum(Countries, str_loc)
-        rpm.oreType = text_to_enum(OreTypes, str_ore__type)
+        rpm.ore_type = text_to_enum(OreTypes, str_ore_type)
 
-        rpm.roomSpan = named_quantity_from_spin(self.wiz.roomWidthSpin, name="Room Span")
-        rpm.minExtraction = named_quantity_from_spin(self.wiz.minExtractionSpin, name="Minimum Extraction")
+        rpm.room_span = quantity_from_spin(self.wiz.roomWidthSpin)
+        rpm.min_extraction = self.wiz.minExtractionSpin.value()
 
-        fragmentation = "Drill Blast" if self.wiz.drillBlastRadio.isChecked() else "Continuous Miner"
-        rpm.fragmentMethod = NamedStr(fragmentation, name="Method of Fragmenting")
+        rpm.fragment_method = RoomAndPillar.DRILL_BLAST if self.wiz.drillBlastRadio.isChecked() \
+            else RoomAndPillar.CONTINUOUS_MINER
+
+        rpm.design_type = RoomAndPillar.REDESIGN if self.wiz.redesignRadio.isChecked() else RoomAndPillar.INITIAL
 
         # Page 2 Data
-        sample_height = named_quantity_from_spin(self.wiz.sampleHeightSpin, name="Sample Height")
-        sample_diameter = named_quantity_from_spin(self.wiz.sampleDiameterSpin, name="Sample Diameter")
-        sample_strength = named_quantity_from_spin(self.wiz.uniaxStrengthSpin, name="Sample Strength")
+        sample_height = quantity_from_spin(self.wiz.sampleHeightSpin)
+        sample_diameter = quantity_from_spin(self.wiz.sampleDiameterSpin)
+        sample_strength = quantity_from_spin(self.wiz.uniaxStrengthSpin)
         is_cylinder = self.wiz.cylindricalSampleRadio.isChecked()
 
-        rpm.frictionAngle = named_quantity_from_spin(self.wiz.frictionAngleSpin, name="Friction Angle")
-        rpm.cohesion = named_quantity_from_spin(self.wiz.cohesionSpin, name="Cohesion")
-        rpm.rmr = named_quantity_from_spin(self.wiz.rmrSpin, name="RMR")
+        rpm.friction_angle = quantity_from_spin(self.wiz.frictionAngleSpin)
+        rpm.cohesion = quantity_from_spin(self.wiz.cohesionSpin)
+        rpm.rmr = self.wiz.rmrSpin.value()
 
-        rpm.seamHeight = named_quantity_from_spin(self.wiz.seamHeightSpin, name="Seam Height")
-        rpm.seamDip = named_quantity_from_spin(self.wiz.seamDipSpin, name="Seam Dip")
-        rpm.mineDepth = named_quantity_from_spin(self.wiz.oreDepthSpin, name="Mine Depth")
-        rpm.floorDensity = NamedFloat(self.wiz.floorDensitySpin.value(), name="Specific Gravity of Floor")
-        rpm.overburdenDensity = NamedFloat(self.wiz.overburdenDensitySpin.value(),
-                                            name="Specific Gravity of Overburden")
-        print(sample_height)
+        rpm.seam_height = quantity_from_spin(self.wiz.seamHeightSpin)
+        rpm.seam_dip = quantity_from_spin(self.wiz.seamDipSpin)
+        rpm.mine_depth = quantity_from_spin(self.wiz.oreDepthSpin)
+
+        rpm.overburden_density = self.wiz.overburdenDensitySpin.value()
+        rpm.floor_density = self.wiz.floorDensitySpin.value()
+
         sample = Sample(sample_strength, sample_height, sample_diameter, is_cylinder)
-        zero_pillar_length = ZERO_LENGTH
-        zero_pillar_length.name = "Pillar Length"
-        rpm.pillar = Pillar(sample, rpm.seamHeight, zero_pillar_length)
+        pillar_length = ZERO_LENGTH
+        rpm.pillar = Pillar(sample, rpm.seam_height, pillar_length)
+
+        if rpm.design_type == RoomAndPillar.REDESIGN:
+            formula = name_to_formula(self.wiz.pillarFormulaCombo.currentText())
+            formula.alpha = self.wiz.constantASpin.value()
+            formula.beta = self.wiz.constantBSpin.value()
+            if formula.k_type == StrengthFormula.OTHER:
+                formula.k = self.wiz.constantKSpin.value()
+            rpm.pillar_formula = formula
+
         self.rpm = rpm
+        self.rpm.print_data()
         self.update_interface()
 
     def save(self):
@@ -176,7 +180,7 @@ class MineRapper(QMainWindow):
             return
         pass
 
-    def export(self, format=None):
+    def export(self, ext=None):
         pass
 
     def about(self):

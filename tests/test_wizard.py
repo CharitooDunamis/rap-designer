@@ -1,13 +1,13 @@
 import pytest
 import sys
 
-from qtpy.QtTest import QTest
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+# from qtpy.QtCore import
+# from qtpy.QtGui import
+# from qtpy.QtTest import QTest
+from qtpy.QtWidgets import QApplication
 
 from gui_.wizard import ProjectWizard
-from rpm.constants import *
+from rpm.constants import (OreTypes, Countries, ALL_FORMULA)
 
 
 app = QApplication(sys.argv)
@@ -79,8 +79,3 @@ def test_pillar_location_combo_has_correct_number_of_items(wizard):
         assert wizard.locationCombo.currentText() != ""
     wizard.locationCombo.setCurrentIndex(item_no + 1)
     assert wizard.locationCombo.currentText() == ""
-
-
-if __name__ == '__main__':
-    pytest.main()
-    # crazy_test_dummy()

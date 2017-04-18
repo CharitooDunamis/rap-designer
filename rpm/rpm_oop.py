@@ -2,9 +2,7 @@ from __future__ import division
 import math
 
 from . import (Q_, unit_reg)
-
-
-ZERO_LENGTH = Q_("0.0 metres")
+from . import ZERO_LENGTH
 
 
 class Solid(object):
@@ -122,48 +120,62 @@ class Sample(Solid):
 
 class RoomAndPillar(object):
 
-    def __init__(self, pillar=None, room_span=None):
+    HUMAN_FRIENDLY = {
+        "room_span": "Length of room",
+        "project_name": "Name of the Project",
+        "design_type": "Type of Design",
+        "location": "Location of the Project",
+        "ore_type": "Substance being Mined",
+        "min_extraction": "Least extraction required",
+        "fragment_method": "Method of Fragmentation",
+        "friction_angle": "Friction Angle",
+        "cohesion": "Cohesion",
+        "rmr": "Rock Mass Rating",
+        "seam_height": "Height of the Orebody",
+        "seam_dip": "Dip Angle of the Orebody",
+        "mine_depth": "Depth of the Ore",
+        "floor_density": "Specific Gravity of the Floor",
+        "overburden_density": "Specific Gravity of the Overburden",
+        "pillar_formula": "Information on Pillar formula to use",
+    }
+    DATA_ATTRIBUTES = HUMAN_FRIENDLY.keys()
+    DRILL_BLAST, CONTINUOUS_MINER = range(233583, 233585)
+    INITIAL, REDESIGN = range(28584, 28586)
 
-        # DATA
+    def __init__(self, pillar=None, room_span=None):
+        for attrib in RoomAndPillar.DATA_ATTRIBUTES:
+            self.__setattr__(attrib, None)
         self.pillar = pillar
         self.room_span = room_span
-        self.project_name = None
-        self.design_type = None
-        self.room_width = None
-        self.location = None
-        self.ore_type = None
-        self.minExtraction = None
-        self.fragment_method = None
 
-        self.friction_angle = None
-        self.cohesion = None
-        self.rmr = None
-        self.seam_height = None
-        self.seam_dip = None
-        self.mine_depth = None
-        self.floor_density = None
-        self.overburden_density = None
-        self.pillar_formula = None
+    def print_data(self):
+        for attrib, friendly_name in RoomAndPillar.HUMAN_FRIENDLY.items():
+            attribute = self.__getattribute__(attrib)
+            try:
+                print("{}\t{}\t{}".format(attrib, friendly_name, attribute))
+            except Exception as e:
+                print(attrib, e)
 
 
 class StrengthFormula(object):
 
-    CUBICAL, UNIAXIAL, GADDY, OTHER = range(4)
-    METRIC, IMPERIAL = range(23283482, 23283484)
-    LINEAR, EXPONENTIAL, ODD = range(4374, 4377)
+    CUBICAL, UNIAXIAL, GADDY, OTHER = "cubical", "uniaxial", "gaddy", "other"
+    METRIC, IMPERIAL = "metric", "imperial"
+    LINEAR, EXPONENTIAL, ODD = "linear formula", "exponential formula", "odd formula"
 
-    def __init__(self, alpha, beta, k_type, fos, category, k=None, name=None):
+    def __init__(self, alpha, beta, k_type, fos, category, unit_system=None, k=None, name=None):
         self.alpha = alpha
         self.beta = beta
         self.k_type = k_type
         self.category = category
         self.fos = fos
+        self.unit_system = unit_system or self.IMPERIAL
         self.k = k
         self.name = name
 
         # k should have a value only when k type is other
         # all the other types are calculated from data
-        # some odd formulas use do not have k defined
+        # some odd formulas do not have k defined
         if self.category != StrengthFormula.ODD:
             assert ((self.k_type == StrengthFormula.OTHER and k is not None) or
                    (self.k_type != StrengthFormula.OTHER and k is None))
@@ -171,3 +183,9 @@ class StrengthFormula(object):
     @property
     def constants(self):
         return self.k, self.alpha, self.beta
+
+    def __str__(self):
+        fixed = "{} with alpha={} and beta={}".format(self.category.upper(), self.alpha, self.beta)
+        if self.k:
+            fixed += " and k = {}".format(self.k)
+        return fixed

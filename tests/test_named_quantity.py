@@ -25,17 +25,17 @@ def test_creation_of_named_string():
     del candidate1
 
 
-def test_named_str_returns_correct_name(named_string):
+def test_named_string_returns_correct_name(named_string):
     assert named_string.name == "Candidate 1"
 
 
-def test_str_method_of_named_string_with_name_returns_correct_value(named_string):
-    assert str(named_string) == "Candidate 1: Michael"
+def test_repr_method_of_named_string_with_name_returns_correct_value(named_string):
+    assert repr(named_string) == "NamedString: Michael"
 
 
-def test_str_method_of_nameless_named_string_returns_correct_value():
+def test_repr_method_of_nameless_named_string_returns_correct_value():
     variable = NamedStr('Me')
-    assert str(variable) == 'Me'
+    assert repr(variable) == 'NamedString: Me'
 
 # ------------ NAMED INT TESTS ----------------------
 
@@ -49,17 +49,17 @@ def test_named_int_returns_correct_name(named_int):
     assert named_int.name == "Angle"
 
 
-def test_str_method_of_named_int_with_name_returns_correct_value(named_int):
-    assert str(named_int) == "Angle: 55"
+def test_repr_method_of_named_int_with_name_returns_correct_value(named_int):
+    assert repr(named_int) == "NamedInteger: 55"
 
 
 def test_named_int_has_correct_value(named_int):
     assert named_int * 1 == 55
 
 
-def test_str_method_of_nameless_named_int_returns_correct_value():
+def test_repr_method_of_nameless_named_int_returns_correct_value():
     variable = NamedInt(3)
-    assert str(variable) == '3'
+    assert repr(variable) == 'NamedInteger: 3'
 
 # ------------ NAMED FLOAT TESTS ----------------------
 
@@ -73,14 +73,29 @@ def test_named_float_returns_correct_name(named_float):
     assert named_float.name == "Average"
 
 
-def test_str_method_of_named_float_with_name_returns_correct_value(named_float):
-    assert str(named_float) == "Average: 98.8"
+def test_repr_method_of_named_float_with_name_returns_correct_value(named_float):
+    assert repr(named_float) == "NamedFloat: 98.8"
 
 
 def test_named_float_has_correct_value(named_float):
     assert named_float * 1 == 98.8
 
 
-def test_str_method_of_nameless_named_float_returns_correct_value():
+def test_repr_method_of_nameless_named_float_returns_correct_value():
     variable = NamedFloat(3.3)
-    assert str(variable) == '3.3'
+    assert repr(variable) == 'NamedFloat: 3.3'
+
+
+def test_creation_of_two_named_floats_results_in_unique_objects():
+    var1 = NamedFloat(20.0, name="First")
+    var2 = NamedFloat(20.0, name="First")
+    assert not (var1 is var2)
+
+
+def test_creation_of_two_named_floats_as_attributes_of_same_object_results_in_unique_objects():
+    class Dummy(object):
+        pass
+    a = Dummy()
+    a.var1 = NamedFloat(20.0, name="First")
+    a.var2 = NamedFloat(20.0, name="First")
+    assert not (a.var1 is a.var2)

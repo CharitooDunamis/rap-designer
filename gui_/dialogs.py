@@ -1,8 +1,5 @@
-# import sys
 
-# from qtpy.QtGui import *
-# from qtpy.QtCore import *
-from qtpy.QtWidgets import *
+from qtpy.QtWidgets import QDialog
 
 if __name__ == "__main__":
     import about_ui

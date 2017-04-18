@@ -186,7 +186,7 @@ class Length(Quantity):
         super(Length, self).__init__(value, unit)
 
     def __str__(self):
-        return "Lenght: {}{}".format(self.value, self.master.symbol)
+        return "Length: {}{}".format(self.value, self.master.symbol)
 
 
 def create_named_object(obj, name):
@@ -202,24 +202,11 @@ class NamedStr(str):
             del kwargs["name"]
         return str.__new__(cls, word, *args, **kwargs)
 
-    # def __init__(self, *args, **kwargs):
-    #     super(NamedStr, self).__init__(*args, **kwargs)
-
-    def set_name(self, name):
-        self.name = name
+    def __repr__(self):
+        return "NamedString: {}".format(self)
 
     def __str__(self):
-        norm_string = super(NamedStr, self).__str__()
-        if self.name:
-            return "{}: {}".format(self.name, norm_string)
-        else:
-            return norm_string
-
-    def __repr__(self):
-        if self.name:
-            return self.__str__()
-        else:
-            return super(NamedStr, self).__repr__()
+        return super(NamedStr, self).__str__()
 
 
 class NamedInt(int):
@@ -230,21 +217,11 @@ class NamedInt(int):
             del kwargs["name"]
         return int.__new__(cls, number)
 
-    def set_name(self, name):
-        self.name = name
+    def __repr__(self):
+        return "NamedInteger: {}".format(super(NamedInt, self).__repr__())
 
     def __str__(self):
-        norm_string = super(NamedInt, self).__str__()
-        if self.name:
-            return "{}: {}".format(self.name, norm_string)
-        else:
-            return norm_string
-
-    def __repr__(self):
-        if self.name:
-            return self.__str__()
-        else:
-            return super(NamedInt, self).__repr__()
+        return super(NamedInt, self).__str__()
 
 
 class NamedFloat(float):
@@ -255,18 +232,8 @@ class NamedFloat(float):
             del kwargs["name"]
         return float.__new__(cls, number)
 
-    def set_name(self, name):
-        self.name = name
+    def __repr__(self):
+        return "NamedFloat: {}".format(super(NamedFloat, self).__repr__())
 
     def __str__(self):
-        norm_string = super(NamedFloat, self).__str__()
-        if self.name:
-            return "{}: {}".format(self.name, norm_string)
-        else:
-            return norm_string
-
-    def __repr__(self):
-        if self.name:
-            return self.__str__()
-        else:
-            return super(NamedFloat, self).__repr__()
+        return super(NamedFloat, self).__str__()

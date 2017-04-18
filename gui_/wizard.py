@@ -4,19 +4,12 @@ from __future__ import absolute_import
 
 import sys
 from os.path import (dirname, join)
-from qtpy.QtGui import *
-from qtpy.QtCore import *
-from qtpy.QtWidgets import *
+from qtpy.QtGui import QPixmap
+from qtpy.QtCore import (SIGNAL, QSize)
+from qtpy.QtWidgets import (QApplication, QWizard)
 
-WIZARD_DIR = dirname(__file__)
-
-if __name__ == '__main__':
-    import wizard_ui
-    module_path = join(WIZARD_DIR, "..")
-    sys.path.append(module_path)
-else:
-    from . import wizard_ui
-
+from . import wizard_ui
+from . import GUI_DIR
 from rpm.constants import (ALL_FORMULA, OreTypes, Countries)
 # from rpm.rpm_oop import (Sample, Pillar)
 
@@ -59,8 +52,8 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         self._configure_widgets()
         self._bindings()
         self.update_constant()
-        watermark = QPixmap(join(WIZARD_DIR,"watermark.png"))
-        logo = QPixmap(join(WIZARD_DIR, "icon.png"))
+        watermark = QPixmap(join(GUI_DIR,"watermark.png"))
+        logo = QPixmap(join(GUI_DIR, "icon.png"))
         self.setPixmap(QWizard.LogoPixmap, logo)
         self.setPixmap(QWizard.WatermarkPixmap, watermark)
         self.setOption(QWizard.ExtendedWatermarkPixmap)
