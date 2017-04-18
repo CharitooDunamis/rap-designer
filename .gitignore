@@ -3,10 +3,6 @@
 *.pyc
 *.pyd
 
-# Jetbrains IDE Files
-.idea/*
-*.iml
-
 # SublimeText files
 *.sublime-workspace
 
