@@ -17,3 +17,5 @@ class ExportDialog(QDialog, export_ui.Ui_Dialog):
     def __init__(self, parent=None):
         super(ExportDialog, self).__init__(parent)
         self.setupUi(self)
+        self.fileTypeCombo.addItem("All")
+        self.fileTypeCombo.addItems(list(self.FILETYPES))

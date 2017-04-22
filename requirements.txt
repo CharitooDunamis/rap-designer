@@ -1,13 +1,13 @@
-pint
+# weasyprint
 matplotlib
-# PyQt4
-# PyQt5
-python-docx
+mock
+mpmath
+openpyxl
+pdfkit
+pint
+PySide
 pytest
 pytest-cov
-mock
-PySide
-pdfkit
-# weasyprint
-qtpy
+python-docx
 qtawesome
+qtpy

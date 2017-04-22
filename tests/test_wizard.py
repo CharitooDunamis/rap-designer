@@ -18,13 +18,13 @@ def wizard(request):
     return ProjectWizard()
 
 
-def test_wizard_skips_formula_page_if_it_is_initial_design(wizard):
-    pytest.skip("Wizard fails to advance probably because it is not shown on screen")
-    wizard.next()
-    assert wizard.currentId() == 1
-    wizard.initialDesignRadio.setChecked(True)
-    wizard.next()
-    assert wizard.currentId() == 3
+# def test_wizard_skips_formula_page_if_it_is_initial_design(wizard):
+#     pytest.skip("Wizard fails to advance probably because it is not shown on screen")
+#     wizard.next()
+#     assert wizard.currentId() == 1
+#     wizard.initialDesignRadio.setChecked(True)
+#     wizard.next()
+#     assert wizard.currentId() == 3
 
 
 def test_forms_project_details_page_have_correct_defaults(wizard):

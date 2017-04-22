@@ -1,8 +1,25 @@
 from __future__ import division
+from datetime import datetime
 import math
 
-from . import (Q_, unit_reg)
-from . import ZERO_LENGTH
+from . import (Q_, unit_reg, ZERO_LENGTH)
+
+
+def requires(obj, attrib_list):
+    """
+    Raises an error if any of the attributes has a value of None or has not been actually set
+    attributes: a list of attributes that are needed to calculate a specific value
+    """
+    for attrib in attrib_list:
+        if not getattr(obj, attrib, None):
+            raise ValueError("{} of {} has not been set".format(obj, attrib))
+
+
+def left_align_pad(string, size):
+    str_size = len(string)
+    diff = size - str_size
+    padded = string if diff <= 0 else string + " " * diff
+    return padded
 
 
 class Solid(object):
@@ -21,10 +38,9 @@ class Solid(object):
         :param length: the length of the bounding cube/cuboid
         :param width: the width of the bounding cube/cuboid
         """
-
         height = height if height > ZERO_LENGTH else ZERO_LENGTH
         length = length if length > ZERO_LENGTH else ZERO_LENGTH
-        width = width if width and width > ZERO_LENGTH else ZERO_LENGTH
+        width = width if (width and width > ZERO_LENGTH) else ZERO_LENGTH
         self.height = height
         self.length = length
         self.width = width if width else length
@@ -58,15 +74,11 @@ class Pillar(Solid):
 
     @property
     def cross_section_perimeter(self):
-        return 2 * (self.length + self.width)
+        return 2.0 * (self.length + self.width)
 
     @property
     def cross_section_area(self):
         return self.length * self.width
-
-    @property
-    def strength(self):
-        return None
 
 
 class Sample(Solid):
@@ -87,23 +99,28 @@ class Sample(Solid):
          it will have the same value
         :param cylindrical: set to True if the sample is cylindrical
         """
-        super(Sample, self).__init__(height, diameter)
+        super(Sample, self).__init__(height, diameter, diameter)
         self.strength = strength
         self.is_cylinder = cylindrical
 
     @property
     def cubical_strength(self):
-        if self.height > Q_("36 inch"):
-            strength = self.gaddy_factor / 6
+        # because of the behaviour of pint, perform operations on the magnitudes of the parameter
+        # after all operations are performed multiply the result by 1 psi to convert it to uniaxial
+        # compressive strength
+        height = self.height.to(unit_reg.inch).magnitude
+        gaddy = self.gaddy_factor.magnitude
+        if height > 36:
+            cubical = gaddy / 6
         else:
-            strength = self.gaddy_factor / math.sqrt(self.height)
-        return strength
+            cubical = gaddy / math.sqrt(height)
+        return cubical * unit_reg.psi
 
     @property
     def diameter(self):
         return self.length
 
-    def is_cubical(self):
+    def is_cubic(self):
         return self.height == self.length
 
     @property
@@ -115,7 +132,10 @@ class Sample(Solid):
 
     @property
     def gaddy_factor(self):
-        return self.strength * math.sqrt(self.diameter)
+        strength = self.strength.to(unit_reg.psi).magnitude
+        diameter = self.diameter.to(unit_reg.inch).magnitude
+        result = strength * diameter ** 0.5
+        return result * unit_reg.psi
 
 
 class RoomAndPillar(object):
@@ -138,15 +158,15 @@ class RoomAndPillar(object):
         "overburden_density": "Specific Gravity of the Overburden",
         "pillar_formula": "Information on Pillar formula to use",
     }
-    DATA_ATTRIBUTES = HUMAN_FRIENDLY.keys()
     DRILL_BLAST, CONTINUOUS_MINER = range(233583, 233585)
-    INITIAL, REDESIGN = range(28584, 28586)
+    INITIAL, REDESIGN = "initial", "redesign"
 
-    def __init__(self, pillar=None, room_span=None):
-        for attrib in RoomAndPillar.DATA_ATTRIBUTES:
+    def __init__(self, pillar=None, formula=None, room_span=None):
+        for attrib in RoomAndPillar.HUMAN_FRIENDLY.keys():
             self.__setattr__(attrib, None)
         self.pillar = pillar
         self.room_span = room_span
+        self.formula = formula
 
     def print_data(self):
         for attrib, friendly_name in RoomAndPillar.HUMAN_FRIENDLY.items():
@@ -156,14 +176,58 @@ class RoomAndPillar(object):
             except Exception as e:
                 print(attrib, e)
 
+    def input_to_txt(self):
+        with open("data.txt", "w") as data_input:
+            data_input.write("{space}INPUT{space}\n".format(space="=" * 15))
+            data_input.write("%s\n\n\n" % datetime.today())
+            biggest_space = len(sorted(self.HUMAN_FRIENDLY.values(), key=len)[-1])
+            print(biggest_space)
+            for attrib, friendly_name in self.HUMAN_FRIENDLY.items():
+                attribute = getattr(self, attrib)
+                try:
+                    unit = attribute.unit if attribute.unit != "dimensionless" else ""
+                    magnitude = unit.magnitude
+                except AttributeError as e:
+                    unit = ""
+                    magnitude = attribute
+                data_input.write("{}:{} {}\n".format(left_align_pad(friendly_name, biggest_space), magnitude, unit))
+
+    @property
+    def vertical_pre_mining_stress(self):
+        requires(self, ["mine_depth", "overburden_density"])
+        return self.mine_depth * self.overburden_density
+
+    def pillar_stress(self):
+        requires(self, ["vertical_pre_mining_stress", "pillar", "room_span"])
+        pillar = self.pillar
+        numerator = (pillar.length + self.room_span) * (pillar.width + self.room_span)
+        denominator = pillar.length * pillar.width
+        return self.vertical_pre_mining_stress * (numerator / denominator)
+
+    @property
+    def extraction_ratio(self):
+        """Returns the extraction ratio in percentage rounded to 2 decimal places"""
+        requires(self, ["room_span", "pillar"])
+        pillar = self.pillar
+        first = pillar.width / (pillar.width + self.room_span)
+        second = pillar.length / (pillar.length + self.room_span)
+        return round(100 * (1 - first * second), 2)
+
+    def pillar_strength(self):
+        pass
+
+    def pillar_strength2(self):
+        return self.vertical_pre_mining_stress / (1 - (self.extraction_ratio / 100))
+
 
 class StrengthFormula(object):
 
     CUBICAL, UNIAXIAL, GADDY, OTHER = "cubical", "uniaxial", "gaddy", "other"
     METRIC, IMPERIAL = "metric", "imperial"
-    LINEAR, EXPONENTIAL, ODD = "linear formula", "exponential formula", "odd formula"
+    LINEAR, EXPONENTIAL, ODD = "linear", "exponential", "odd"
+    __slots__ = ("k_type", "beta", "alpha", "category", "fos", "unit_system", "k", "name")
 
-    def __init__(self, alpha, beta, k_type, fos, category, unit_system=None, k=None, name=None):
+    def __init__(self, alpha, beta, k_type, fos, category, owner=None, unit_system=None, k=None, name=None):
         self.alpha = alpha
         self.beta = beta
         self.k_type = k_type
@@ -185,7 +249,46 @@ class StrengthFormula(object):
         return self.k, self.alpha, self.beta
 
     def __str__(self):
-        fixed = "{} with alpha={} and beta={}".format(self.category.upper(), self.alpha, self.beta)
-        if self.k:
-            fixed += " and k = {}".format(self.k)
-        return fixed
+        return "{}, k={}, a={}, b={}".format(self.name, self.k, self.alpha, self.beta)
+
+    def pillar_strength(self, pillar=None, alpha_base=None, beta_base=None, k=None):
+        assert (alpha_base and beta_base) or pillar
+        k = self._get_correct_k(pillar, k)
+
+        if alpha_base and beta_base:
+            a_base, b_base = alpha_base, beta_base
+        else:
+            a_base, b_base = pillar.width, pillar.height
+
+        if self.category == self.LINEAR:
+            return self.linear_strength(k, a_base, b_base)
+        else:
+            return self.exponential_strength(k, a_base, b_base)
+
+    def linear_strength(self, k, a_base, b_base):
+        return k * (self.alpha + self.beta * (a_base * b_base))
+
+    def exponential_strength(self, k, a_base, b_base):
+        return k * a_base ** self.alpha * b_base ** self.beta
+
+    def _get_correct_k(self, pillar=None, default=None):
+        """
+        The various properties that can be used in place of constant k, the material constant
+        are properties of the pillar sample. Where this is not the case, they are empirical
+        values determined for the formula.
+        If no pillar object is provided it assumes the formula has a defined k which it tries
+        to return. If that too is not provided, then the function can be given a default value
+        which it returns.
+        When all the above, it raises an AttributeError.
+        """
+        if pillar:
+            sample = pillar.sample
+            if self.k_type == self.CUBICAL:
+                return sample.cubical_strength
+            elif self.k_type == self.GADDY:
+                return sample.gaddy_factor
+            elif self.k_type == self.UNIAXIAL:
+                return sample.strength
+        elif self.k or default:
+            return self.k or default
+        raise AttributeError("Attribute k for Pillar Strength formula is None.\n{}".format(self))

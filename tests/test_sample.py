@@ -15,34 +15,39 @@ def c_sample(request):
     return Sample(strength=Q_("5.2m"), height=Q_("0.4m"), diameter=Q_("0.12m"), cylindrical=True)
 
 
+@pytest.fixture
+def sample2(request):
+    return Sample(strength=Q_("3822psi"), height=Q_("40in"), diameter=Q_("54mm"))
+
+
 def test_diameter_is_an_alias_for_length_of_samples(sample):
     assert sample.diameter == sample.length == sample.width
 
 
 def test_non_cubical_sample_returns_false_for_is_cubical_method(sample):
-    assert sample.is_cubical() is False
+    assert sample.is_cubic() is False
 
 
 def test_cubical_sample_returns_true_for_is_cubical_method():
     sample = Sample(strength=Q_("5.2m"), height=Q_("0.2m"), diameter=Q_("0.2m"))
-    assert sample.is_cubical()
+    assert sample.is_cubic()
 
 
 def test_cylindrical_sample_returns_correct_volume(c_sample):
-    assert round(c_sample.volume.magnitude, 6) == 0.004524
+    assert round(c_sample.volume, 6) == Q_("0.004524meter**3")
 
 
 def test_non_cylindrical_sample_return_correct_volume(sample):
-    pytest.skip("WIP")
-    assert round(sample.volume, 6) == 0.00576
+    assert round(sample.volume, 6) == Q_("0.00576in**3")
 
 
-def test_sample_returns_correct_gaddy_factor(sample):
-    pytest.skip("WIP")
-    sample = Sample(strength=5580, height=0.4, diameter=2.132)
-    assert round(sample.gaddy_factor, 0) == 5580
+def test_sample_returns_correct_gaddy_factor(sample2):
+    expected = Q_("5573psi")
+    result = round(sample2.gaddy_factor, 0)
+    assert result == expected
 
 
-def test_sample_returns_corret_cubical_strength(sample):
-    pytest.skip("WIP")
-    assert round(sample.cubical_strength, 10) == 413.0903262969
+def test_sample_returns_corret_cubical_strength(sample2):
+    expected = Q_("929.0psi")
+    result = round(sample2.cubical_strength, 0)
+    assert expected == result

@@ -43,7 +43,7 @@ obert_duval = SF(alpha=0.778, beta=0.22, category=SF.LINEAR, k_type=SF.CUBICAL, 
 holland_gaddy = SF(alpha=0.5, beta=-1, k_type=SF.GADDY, fos=2.0, category=SF.EXPONENTIAL, name="Holland-Gaddy")
 holland = SF(alpha=0.5, beta=-0.5, k_type=SF.CUBICAL, fos=2.0, category=SF.EXPONENTIAL, name="Holland")
 
-ALL_FORMULA = [hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy]
+ALL_FORMULA = (hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy)
 
 if __name__ == '__main__':
     print(len(ALL_FORMULA))
