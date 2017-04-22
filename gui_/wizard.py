@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import sys
 from os.path import (dirname, join)
 from qtpy.QtGui import QPixmap
-from qtpy.QtCore import (SIGNAL, QSize)
+from qtpy.QtCore import (QSize, SIGNAL)
 from qtpy.QtWidgets import (QApplication, QWizard)
 
 from . import wizard_ui
@@ -103,11 +103,11 @@ class ProjectWizard(QWizard, wizard_ui.Ui_Wizard):
         self.oreTypeCombo.addItems([enum_to_text(ore_type) for ore_type in OreTypes])
         self.oreTypeCombo.setEditable(False)
         self.pillarFormulaCombo.addItems([formula.name for formula in ALL_FORMULA])
-        self.projectNameLineEdit.setText("New RAP Project")
+        # self.projectNameLineEdit.setText("New RAP Project")
         self.projectNameLineEdit.selectAll()
-        self.drillBlastRadio.setChecked(True)
-        self.cylindricalSampleRadio.setChecked(True)
-        self.constantKSpin.setRange(1.0, 5000.0)
+        # self.drillBlastRadio.setChecked(True)
+        # self.cylindricalSampleRadio.setChecked(True)
+        # self.constantKSpin.setRange(1.0, 5000.0)
 
     def nextId(self, *args, **kwargs):
         """For room and pillar systems that are being designed for the first time there is limited

@@ -14,7 +14,7 @@ from rpm.constants import (Countries, ALL_FORMULA, OreTypes)
 
 UNICODE_UNITS = {
     "°": "degree",
-    "lb/ft³": "pound per foot ** 3",
+    "kg/m³": "kilogram per metre ** 3",
 }
 
 
