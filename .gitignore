@@ -3,11 +3,13 @@
 *.pyc
 *.pyd
 
+# Other Python
+__pycache__
+
+
 # SublimeText files
 *.sublime-workspace
 
-# Other files
-*.ui
-
 # Hidden files
 .*/
+
