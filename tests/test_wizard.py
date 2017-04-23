@@ -7,7 +7,8 @@ import sys
 from qtpy.QtWidgets import QApplication
 
 from gui_.wizard import ProjectWizard
-from rpm.constants import (OreTypes, Countries, ALL_FORMULA)
+from rpm.constants import (OreTypes, Countries)
+from rpm.rpm_oop import ALL_FORMULA
 
 
 app = QApplication(sys.argv)

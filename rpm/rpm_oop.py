@@ -3,6 +3,7 @@ from datetime import datetime
 import math
 
 from . import (Q_, unit_reg, ZERO_LENGTH)
+# from .rpm_functions import high_stacey_page
 
 
 def requires(obj, attrib_list):
@@ -20,6 +21,128 @@ def left_align_pad(string, size):
     diff = size - str_size
     padded = string if diff <= 0 else string + " " * diff
     return padded
+
+
+class StrengthFormula(object):
+
+    CUBICAL, UNIAXIAL, GADDY, OTHER = "cubical", "uniaxial", "gaddy", "other"
+    METRIC, IMPERIAL = "metric", "imperial"
+    LINEAR, EXPONENTIAL, ODD = "linear", "exponential", "odd"
+    __slots__ = ("k_type", "beta", "alpha", "category", "fos", "unit_system", "k", "name")
+
+    def __init__(self, alpha, beta, k_type, fos, category, owner=None, unit_system=None, k=None, name=None):
+        self.alpha = alpha
+        self.beta = beta
+        self.k_type = k_type
+        self.category = category
+        self.fos = fos
+        self.unit_system = unit_system or self.IMPERIAL
+        self.k = k
+        self.name = name
+
+        # k should have a value only when k type is other
+        # all the other types are calculated from data
+        # some odd formulas do not have k defined
+        if self.category != StrengthFormula.ODD:
+            assert ((self.k_type == StrengthFormula.OTHER and k is not None) or
+                   (self.k_type != StrengthFormula.OTHER and k is None))
+
+    @property
+    def constants(self):
+        return self.k, self.alpha, self.beta
+
+    def __str__(self):
+        return "{}, k={}, a={}, b={}".format(self.name, self.k, self.alpha, self.beta)
+
+    def pillar_strength(self, pillar, k=None):
+        k = self._get_correct_k(pillar, k)
+
+        a_base, b_base = pillar.width, pillar.height
+        if self.unit_system == self.METRIC:
+            a_base = a_base.to(unit_reg.metre).magnitude
+            b_base = b_base.to(unit_reg.metre).magnitude
+        else:
+            a_base = a_base.to(unit_reg.foot).magnitude
+            b_base = b_base.to(unit_reg.foot).magnitude
+
+        if self.category == self.LINEAR:
+            strength = self.linear_strength(k, a_base, b_base)
+        else:
+            strength = self.exponential_strength(k, a_base, b_base)
+        print("Pillar strength incoming!:", strength)
+
+        if self.unit_system == self.METRIC:
+            return strength * unit_reg.mpa
+        else:
+            return strength * unit_reg.psi
+
+    def linear_strength(self, k, a_base, b_base):
+        print("using a linear relation")
+        return k * (self.alpha + self.beta * (a_base / b_base))
+
+    def exponential_strength(self, k, a_base, b_base):
+        print("using an exponential relation.")
+        return k * a_base ** self.alpha * b_base ** self.beta
+
+    def _get_correct_k(self, pillar=None, default=None):
+        """
+        The various properties that can be used in place of constant k, the material constant
+        are properties of the pillar sample. Where this is not the case, they are empirical
+        values determined for the formula.
+        If no pillar object is provided it assumes the formula has a defined k which it tries
+        to return. If that too is not provided, then the function can be given a default value
+        which it returns.
+        When all the above, it raises an AttributeError.
+        """
+        if pillar is not None:
+            sample = pillar.sample
+            if self.k_type == self.CUBICAL:
+                k_value = sample.cubical_strength
+            elif self.k_type == self.GADDY:
+                k_value = sample.gaddy_factor
+            elif self.k_type == self.UNIAXIAL:
+                k_value = sample.strength
+            # convert to the right unit system so that final calculation can be done blindly
+            # trying to do final calculation with 'wise' units raises several errors
+            try:
+                # for cases when all the above conditionals fail
+                if self.unit_system == self.METRIC:
+                    k_value.ito(unit_reg.mpa)
+                else:
+                    k_value.ito(unit_reg.psi)
+                return k_value.magnitude
+            except Exception as e:
+                print(e)
+        # These values as raw values and do not need any unit conversion
+        if self.k:
+            return self.k
+        elif default:
+            return default
+        raise AttributeError("Attribute k for Pillar Strength formula is None.\n{}".format(self))
+
+
+# The various formula that are used in calculating pillar strength
+# The value of each enumeration is a tuple of the constants that
+# are used along with the formula
+
+SF = StrengthFormula
+hardy_agapito = SF(alpha=-0.118, beta=0.833, k_type=SF.CUBICAL, fos=(1.0, 2.0, 2.0), unit_system=SF.METRIC,
+                   category=SF.EXPONENTIAL, name="Hardy-Agapito")
+salamon_munro = SF(alpha=0.46, beta=-0.66, k_type=SF.OTHER, fos=(1.31, 1.6, 1.88), unit_system=SF.IMPERIAL,
+                   category=SF.EXPONENTIAL, k=1320, name="Salamon-Munro")
+bieniawski = SF(alpha=0.64, beta=0.36, k_type=SF.CUBICAL, fos=(1.5, 1.5, 2.0), unit_system=SF.IMPERIAL,
+                category=SF.LINEAR, name="Bieniawski")
+stacey_page = SF(alpha=0.5, beta=0.7, k_type=SF.GADDY, fos=(1.0, 1.5, 2.0), unit_system=SF.METRIC,
+                 category=SF.EXPONENTIAL, name="Stacey-Page")
+cmri = SF(1, -1, k_type=SF.OTHER, fos=1, category=SF.ODD, name="C.M.R.I.")
+obert_duval = SF(alpha=0.778, beta=0.22, category=SF.LINEAR, k_type=SF.CUBICAL, fos=(1.5, 2.0, 4.0),
+                 unit_system=SF.IMPERIAL, name="Obert-Duval")
+holland_gaddy = SF(alpha=0.5, beta=-1, k_type=SF.GADDY, fos=(1.8, 2.0, 2.2), unit_system=SF.IMPERIAL,
+                   category=SF.EXPONENTIAL, name="Holland-Gaddy")
+holland = SF(alpha=0.5, beta=-0.5, k_type=SF.CUBICAL, fos=(1.0, 2.0, 2.0), unit_system=SF.IMPERIAL,
+             category=SF.EXPONENTIAL, name="Holland")
+
+ALL_FORMULA = (hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy)
 
 
 class Solid(object):
@@ -80,6 +203,9 @@ class Pillar(Solid):
     def cross_section_area(self):
         return self.length * self.width
 
+    def __str__(self):
+        return "Solid: length: {}\twidth: {}\theight: {}".format(self.length, self.width, self.height)
+
 
 class Sample(Solid):
     """
@@ -136,6 +262,9 @@ class Sample(Solid):
         diameter = self.diameter.to(unit_reg.inch).magnitude
         result = strength * diameter ** 0.5
         return result * unit_reg.psi
+
+    def __str__(self):
+        return "Sample: strength:{}\tlength:{}\twidth:{}\theight:{}".format(self.strength, self.length, self.width, self.height)
 
 
 class RoomAndPillar(object):
@@ -194,9 +323,15 @@ class RoomAndPillar(object):
 
     @property
     def vertical_pre_mining_stress(self):
-        requires(self, ["mine_depth", "overburden_density"])
-        return self.mine_depth * self.overburden_density
+        # requires(self, ["mine_depth", "overburden_density"])
+        if self.overburden_density:
+            value = self.mine_depth.to(unit_reg.metre) * self.overburden_density.to(Q_("kilogram / metre ** 3"))
+            return value.magnitude ** unit_reg.mpa
+        else:
+            value = 1.1 * self.mine_depth.to(unit_reg.foot)
+            return value.magnitude * unit_reg.psi
 
+    @property
     def pillar_stress(self):
         requires(self, ["vertical_pre_mining_stress", "pillar", "room_span"])
         pillar = self.pillar
@@ -213,82 +348,44 @@ class RoomAndPillar(object):
         second = pillar.length / (pillar.length + self.room_span)
         return round(100 * (1 - first * second), 2)
 
+    @property
     def pillar_strength(self):
-        pass
+        formula = self.formula
+        if formula.name == "C.M.R.I":
+            print("This is a CMRI Formula")
+            bracket_component = self.mine_depth.to("metre").magnitude / 160 * (self.pillar.width_height_ratio - 1)
+            outside_bracket = 0.27 * self.pillar.sample.strength.magnitude * self.pillar.height.magnitude ** -0.36
+            return (outside_bracket + bracket_component) * unit_reg.mpa
 
+        elif self.pillar.width_height_ratio > 10:
+            print("This is a squat pillar. Use high stacey-page.")
+            return self.high_stacey_page()
+
+        elif formula.name == "Hardy-Agapito":
+            print("Use Hardy-Agapito")
+            a_base = self.pillar.sample.volume / self.pillar.volume
+            b_base = self.pillar.width_height_ratio * self.pillar.sample.height_width_ratio
+            self.formula.pillar_strength(a_base, b_base)
+        # if formula.name in ("Holland", "Holland-Gaddy", "Bieniawski", "Salamon-Munro", "Orbet-Duval", "Stacey-Page"):
+        else:
+            print("Other formula must deal with this.")
+            return self.formula.pillar_strength(self.pillar)
+
+    def high_stacey_page(self):
+        width = self.pillar.width.ito(unit_reg.metre)
+        height = self.pillar.height.ito(unit_reg.metre)
+        length = self.pillar.length.ito(unit_reg.metre)
+        constant_k = self.pillar.sample.gaddy_factor.ito(unit_reg.mpa)
+        effective_width = (4 * width * length) / (2 * width + 2 * length)
+        bracket_out = constant_k * (2.5 / (effective_width * height) ** 0.07)
+        inner_bracket = (effective_width / (4.5 * height)) ** 4.5 - 1
+        bracket_value = 0.13 * inner_bracket + 1
+        return bracket_out * bracket_value
+
+    @property
     def pillar_strength2(self):
         return self.vertical_pre_mining_stress / (1 - (self.extraction_ratio / 100))
 
-
-class StrengthFormula(object):
-
-    CUBICAL, UNIAXIAL, GADDY, OTHER = "cubical", "uniaxial", "gaddy", "other"
-    METRIC, IMPERIAL = "metric", "imperial"
-    LINEAR, EXPONENTIAL, ODD = "linear", "exponential", "odd"
-    __slots__ = ("k_type", "beta", "alpha", "category", "fos", "unit_system", "k", "name")
-
-    def __init__(self, alpha, beta, k_type, fos, category, owner=None, unit_system=None, k=None, name=None):
-        self.alpha = alpha
-        self.beta = beta
-        self.k_type = k_type
-        self.category = category
-        self.fos = fos
-        self.unit_system = unit_system or self.IMPERIAL
-        self.k = k
-        self.name = name
-
-        # k should have a value only when k type is other
-        # all the other types are calculated from data
-        # some odd formulas do not have k defined
-        if self.category != StrengthFormula.ODD:
-            assert ((self.k_type == StrengthFormula.OTHER and k is not None) or
-                   (self.k_type != StrengthFormula.OTHER and k is None))
-
     @property
-    def constants(self):
-        return self.k, self.alpha, self.beta
-
-    def __str__(self):
-        return "{}, k={}, a={}, b={}".format(self.name, self.k, self.alpha, self.beta)
-
-    def pillar_strength(self, pillar=None, alpha_base=None, beta_base=None, k=None):
-        assert (alpha_base and beta_base) or pillar
-        k = self._get_correct_k(pillar, k)
-
-        if alpha_base and beta_base:
-            a_base, b_base = alpha_base, beta_base
-        else:
-            a_base, b_base = pillar.width, pillar.height
-
-        if self.category == self.LINEAR:
-            return self.linear_strength(k, a_base, b_base)
-        else:
-            return self.exponential_strength(k, a_base, b_base)
-
-    def linear_strength(self, k, a_base, b_base):
-        return k * (self.alpha + self.beta * (a_base * b_base))
-
-    def exponential_strength(self, k, a_base, b_base):
-        return k * a_base ** self.alpha * b_base ** self.beta
-
-    def _get_correct_k(self, pillar=None, default=None):
-        """
-        The various properties that can be used in place of constant k, the material constant
-        are properties of the pillar sample. Where this is not the case, they are empirical
-        values determined for the formula.
-        If no pillar object is provided it assumes the formula has a defined k which it tries
-        to return. If that too is not provided, then the function can be given a default value
-        which it returns.
-        When all the above, it raises an AttributeError.
-        """
-        if pillar:
-            sample = pillar.sample
-            if self.k_type == self.CUBICAL:
-                return sample.cubical_strength
-            elif self.k_type == self.GADDY:
-                return sample.gaddy_factor
-            elif self.k_type == self.UNIAXIAL:
-                return sample.strength
-        elif self.k or default:
-            return self.k or default
-        raise AttributeError("Attribute k for Pillar Strength formula is None.\n{}".format(self))
+    def factor_of_safety(self):
+        return (self.pillar_strength.to(unit_reg.psi) / self.pillar_stress).magnitude

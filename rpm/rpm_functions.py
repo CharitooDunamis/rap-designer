@@ -2,7 +2,7 @@ from __future__ import division
 
 import math
 
-from .constants import ALL_FORMULA
+from .rpm_oop import ALL_FORMULA
 
 
 SALAMON_MUNRO = ALL_FORMULA[1]

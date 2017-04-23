@@ -10,8 +10,8 @@ from qtpy.QtWidgets import (QApplication, QWizard)
 
 from . import wizard_ui
 from . import GUI_DIR
-from rpm.constants import (ALL_FORMULA, OreTypes, Countries)
-# from rpm.rpm_oop import (Sample, Pillar)
+from rpm.constants import (OreTypes, Countries)
+from rpm.rpm_oop import ALL_FORMULA
 
 
 def text_to_enum(enum, text, sep=" "):
