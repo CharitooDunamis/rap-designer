@@ -1,8 +1,10 @@
 from __future__ import division
 from datetime import datetime
+from collections import namedtuple
 import math
 
 from . import (Q_, unit_reg, ZERO_LENGTH)
+from .utils import cotangent
 # from .rpm_functions import high_stacey_page
 
 
@@ -23,6 +25,9 @@ def left_align_pad(string, size):
     return padded
 
 
+fos_tuple = namedtuple("SafetyTuple", ("lower", "recommended", "upper"))
+
+
 class StrengthFormula(object):
 
     CUBICAL, UNIAXIAL, GADDY, OTHER = "cubical", "uniaxial", "gaddy", "other"
@@ -30,12 +35,13 @@ class StrengthFormula(object):
     LINEAR, EXPONENTIAL, ODD = "linear", "exponential", "odd"
     __slots__ = ("k_type", "beta", "alpha", "category", "fos", "unit_system", "k", "name")
 
-    def __init__(self, alpha, beta, k_type, fos, category, owner=None, unit_system=None, k=None, name=None):
+    def __init__(self, alpha, beta, k_type, category,  fos=(1.0, 1.5, 2.0),
+                 unit_system=None, k=None, name=None):
         self.alpha = alpha
         self.beta = beta
         self.k_type = k_type
         self.category = category
-        self.fos = fos
+        self.fos = fos_tuple(lower=fos[0], recommended=fos[1], upper=fos[-1])
         self.unit_system = unit_system or self.IMPERIAL
         self.k = k
         self.name = name
@@ -52,7 +58,7 @@ class StrengthFormula(object):
         return self.k, self.alpha, self.beta
 
     def __str__(self):
-        return "{}, k={}, a={}, b={}".format(self.name, self.k, self.alpha, self.beta)
+        return "{}, k={}, a={} and b={}".format(self.name, self.k or self.k_type, self.alpha, self.beta)
 
     def pillar_strength(self, pillar, k=None):
         k = self._get_correct_k(pillar, k)
@@ -83,6 +89,13 @@ class StrengthFormula(object):
     def exponential_strength(self, k, a_base, b_base):
         print("using an exponential relation.")
         return k * a_base ** self.alpha * b_base ** self.beta
+
+    def is_good_factor_of_safety(self, fos):
+        return self.fos.lower <= fos <= self.fos.upper
+
+    @property
+    def recommended_fos(self):
+        return self.fos.recommended
 
     def _get_correct_k(self, pillar=None, default=None):
         """
@@ -134,7 +147,7 @@ bieniawski = SF(alpha=0.64, beta=0.36, k_type=SF.CUBICAL, fos=(1.5, 1.5, 2.0), u
                 category=SF.LINEAR, name="Bieniawski")
 stacey_page = SF(alpha=0.5, beta=0.7, k_type=SF.GADDY, fos=(1.0, 1.5, 2.0), unit_system=SF.METRIC,
                  category=SF.EXPONENTIAL, name="Stacey-Page")
-cmri = SF(1, -1, k_type=SF.OTHER, fos=1, category=SF.ODD, name="C.M.R.I.")
+cmri = SF(1, -1, k_type=SF.OTHER, fos=(1, 1, 1), category=SF.ODD, name="C.M.R.I.")
 obert_duval = SF(alpha=0.778, beta=0.22, category=SF.LINEAR, k_type=SF.CUBICAL, fos=(1.5, 2.0, 4.0),
                  unit_system=SF.IMPERIAL, name="Obert-Duval")
 holland_gaddy = SF(alpha=0.5, beta=-1, k_type=SF.GADDY, fos=(1.8, 2.0, 2.2), unit_system=SF.IMPERIAL,
@@ -283,8 +296,8 @@ class RoomAndPillar(object):
         "seam_height": "Height of the Orebody",
         "seam_dip": "Dip Angle of the Orebody",
         "mine_depth": "Depth of the Ore",
-        "floor_density": "Specific Gravity of the Floor",
-        "overburden_density": "Specific Gravity of the Overburden",
+        "floor_density": "Unit Weight of the Floor",
+        "overburden_density": "Unit Weight of the Overburden",
         "pillar_formula": "Information on Pillar formula to use",
     }
     DRILL_BLAST, CONTINUOUS_MINER = range(233583, 233585)
@@ -323,17 +336,18 @@ class RoomAndPillar(object):
 
     @property
     def vertical_pre_mining_stress(self):
-        # requires(self, ["mine_depth", "overburden_density"])
         if self.overburden_density:
-            value = self.mine_depth.to(unit_reg.metre) * self.overburden_density.to(Q_("kilogram / metre ** 3"))
-            return value.magnitude ** unit_reg.mpa
-        else:
-            value = 1.1 * self.mine_depth.to(unit_reg.foot)
-            return value.magnitude * unit_reg.psi
+            overburden_density = self.overburden_density.to(unit_reg("meganewton per metre ** 3"))
+            mine_depth = self.mine_depth.to(unit_reg.metre)
+            stress = (overburden_density * mine_depth).magnitude * unit_reg("megapascal")
+            return stress
+
+        stress = 1.1 * self.mine_depth.to(unit_reg.foot)
+        return stress.magnitude * unit_reg.psi
 
     @property
     def pillar_stress(self):
-        requires(self, ["vertical_pre_mining_stress", "pillar", "room_span"])
+        # requires(self, ["vertical_pre_mining_stress", "pillar", "room_span"])
         pillar = self.pillar
         numerator = (pillar.length + self.room_span) * (pillar.width + self.room_span)
         denominator = pillar.length * pillar.width
@@ -346,7 +360,8 @@ class RoomAndPillar(object):
         pillar = self.pillar
         first = pillar.width / (pillar.width + self.room_span)
         second = pillar.length / (pillar.length + self.room_span)
-        return round(100 * (1 - first * second), 2)
+        ratio = (1 - first * second).magnitude
+        return round(100 * ratio, 2)
 
     @property
     def pillar_strength(self):
@@ -389,3 +404,48 @@ class RoomAndPillar(object):
     @property
     def factor_of_safety(self):
         return (self.pillar_strength.to(unit_reg.psi) / self.pillar_stress).magnitude
+
+    # ------------------ SHAPE FACTORS ------------------------#
+
+    @property
+    def sf_gamma(self):
+        return 1.0 - 0.4 * (self.pillar.width / self.pillar.length)
+
+    @property
+    def sf_q(self):
+        return 1.0 + math.sin(self.friction_angle) * (self.pillar.width / self.pillar.length)
+
+    # ---------- BEARING CAPACITY FACTORS ---------------------#
+
+    @property
+    def bcf_c(self):
+        friction_angle = math.radians(self.friction_angle.magnitude)
+        return (self.bcf_q - 1) * cotangent(self.friction_angle)
+
+    @property
+    def bcf_gamma(self):
+        friction_angle = math.radians(self.friction_angle.magnitude)
+        return 1.5 * (self.bcf_q - 1) * math.tan(friction_angle)
+
+    @property
+    def bcf_q(self):
+        friction_angle = math.radians(self.friction_angle.magnitude)
+        first = math.e ** (math.pi * math.tan(friction_angle))
+        second = math.tan((math.pi / 4) + (friction_angle / 2)) ** 2
+        value = first * second
+        return value
+
+    @property
+    def bearing_capacity(self):
+        friction_angle = math.radians(self.friction_angle.magnitude)
+        addend = self.cohesion * cotangent(friction_angle) * ((self.bcf_q * self.sf_q) - 1)
+        product = 0.5 * self.floor_density * self.pillar.width * self.bcf_gamma * self.sf_gamma
+        return product + addend
+
+    @property
+    def bearing_capacity_factor_of_safety(self):
+        bc = self.bearing_capacity.to(unit_reg("megapascal"))
+        stress = self.pillar_stress.to(unit_reg("megapascal"))
+        print("Bearing Capacity:", bc)
+        print("Pillar Stress:", stress)
+        return (bc / stress).magnitude

@@ -5,11 +5,11 @@ from qtpy.QtGui import QKeySequence, QIcon
 from qtpy.QtWidgets import (QAction, QApplication, QDesktopWidget, QGraphicsView, QMainWindow)
 import qtawesome as qta
 
-from .dialogs import AboutDialog
+from .dialogs import AboutDialog, ExportDialog
 from .wizard import (text_to_enum, ProjectWizard, name_to_formula)
 from rpm import (ZERO_LENGTH, DimensionalityError, unit_reg, Q_)
-from rpm.rpm_oop import (RoomAndPillar, Sample, Pillar, StrengthFormula)
-from rpm.constants import (Countries, ALL_FORMULA, OreTypes)
+from rpm.rpm_oop import (RoomAndPillar, Sample, Pillar, StrengthFormula, ALL_FORMULA)
+from rpm.constants import (Countries, OreTypes)
 
 
 UNICODE_UNITS = {
