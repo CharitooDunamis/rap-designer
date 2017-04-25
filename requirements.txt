@@ -11,3 +11,5 @@ pytest-cov
 python-docx
 qtawesome
 qtpy
+PyInstaller
+# docx2html

@@ -2,7 +2,7 @@ import sys
 
 from qtpy.QtCore import (SIGNAL, QSize, QRect)
 from qtpy.QtGui import QKeySequence, QIcon
-from qtpy.QtWidgets import (QAction, QApplication, QDesktopWidget, QTextBrowser, QMainWindow)
+from qtpy.QtWidgets import (QAction, QApplication, QDesktopWidget, QTextBrowser, QMainWindow, QFileDialog)
 import qtawesome as qta
 
 from .dialogs import AboutDialog, ExportDialog
@@ -166,7 +166,6 @@ class MineRapper(QMainWindow):
         rpm.pillar = Pillar(sample, rpm.seam_height, pillar_length)
 
         if rpm.design_type == RoomAndPillar.REDESIGN:
-            print("This is a redesign.")
             formula = name_to_formula(self.wiz.pillarFormulaCombo.currentText())
             formula.alpha = self.wiz.constantASpin.value()
             formula.beta = self.wiz.constantBSpin.value()
@@ -187,7 +186,13 @@ class MineRapper(QMainWindow):
         pass
 
     def export(self, ext=None):
-        pass
+        file_name, ext = QFileDialog.getSaveFileName(parent=self, caption="Export Results to Html",
+                                             filter="Html Files (*.htm *.html *.shtml)")
+        with open(file_name, "w") as html_end:
+            html_end.write(self.rpm.html_report)
+
+        # dialog = ExportDialog(self)
+        # dialog.exec_()
 
     def about(self):
         about_dlg = AboutDialog(self)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>253</width>
-    <height>144</height>
+    <width>351</width>
+    <height>165</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,21 +16,57 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QFormLayout" name="formLayout">
-     <property name="verticalSpacing">
-      <number>17</number>
-     </property>
      <item row="0" column="0">
-      <widget class="QLabel" name="fileNameLabel">
+      <widget class="QLabel" name="folderLabel">
        <property name="text">
-        <string>&amp;File Name</string>
+        <string>&amp;Folder</string>
        </property>
        <property name="buddy">
-        <cstring>fileNameLineEdit</cstring>
+        <cstring>folderLineEdit</cstring>
        </property>
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QLineEdit" name="fileNameLineEdit"/>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QLineEdit" name="folderLineEdit">
+         <property name="frame">
+          <bool>false</bool>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="browseButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>17</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>50</width>
+           <height>31</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>Browse</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="fileTypeLabel">
@@ -43,7 +79,33 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QComboBox" name="fileTypeCombo"/>
+      <widget class="QComboBox" name="fileTypeCombo">
+       <item>
+        <property name="text">
+         <string>All</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>PDF</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>HTML</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>CSV</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Word Document</string>
+        </property>
+       </item>
+      </widget>
      </item>
     </layout>
    </item>

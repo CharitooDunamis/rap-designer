@@ -1,9 +1,8 @@
 from __future__ import division
 from datetime import datetime
 from collections import namedtuple
-from io import StringIO
 import math
-from os.path import dirname, join
+from os.path import (dirname, join)
 
 from mpmath import findroot
 
@@ -173,10 +172,9 @@ holland = SF(alpha=0.5, beta=-0.5, k_type=SF.CUBICAL, fos=(1.0, 2.0, 2.0), unit_
              category=SF.EXPONENTIAL, name="Holland")
 msalamon_munro = SF(alpha=0.46, beta=-0.66, k_type=SF.OTHER, fos=(1.31, 1.6, 1.88), unit_system=SF.METRIC,
                    category=SF.EXPONENTIAL, k=7.2, name="Salamon-Munro (metric)")
-mbieniawski = SF(alpha=0.64, beta=0.36, k_type=SF.CUBICAL, fos=(1.5, 1.5, 2.0), unit_system=SF.METRIC,
-                category=SF.LINEAR, name="Bieniawski (metric)")
 
-ALL_FORMULA = (hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy, msalamon_munro, mbieniawski)
+ALL_FORMULA = (hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy,
+               msalamon_munro)
 
 
 class Solid(object):
@@ -413,10 +411,14 @@ class RoomAndPillar(object):
         for attrib, friendly_name in self.OUTPUT.items():
             attribute = getattr(self, attrib)
             param = param_string.format(friendly_name)
+            try:
+                good = round(attribute, 2)
+            except Exception as e:
+                good = attribute
             if isinstance(attribute, Q_):
-                value = q_value_string.format(attribute)
+                value = q_value_string.format(good)
             else:
-                value = value_string.format(attribute)
+                value = value_string.format(good)
             self.outputIO += "<tr>{}</tr>".format(param + value)
 
     def to_html(self):
@@ -432,7 +434,7 @@ class RoomAndPillar(object):
         header = html_file.read()
         time =  datetime.today().strftime("%I:%M:%S %p")
         date = datetime.today().strftime("%a, %d/%b/%Y")
-        header += "<p>{}</p><p>{}</p>".format(date, time)
+        header += "<p>Date: {}</p><p>Time: {}</p>".format(date, time)
         html = header + raw + "</body></html>"
         html_file.close()
         self.html_report = html
