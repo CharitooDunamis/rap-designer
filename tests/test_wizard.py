@@ -39,11 +39,11 @@ def test_forms_project_details_page_have_correct_defaults(wizard):
 
 def test_geo_technical_forms_have_correct_defaults(wizard):
     assert wizard.uniaxStrengthSpin.value() == 38.47
-    assert wizard.cohesionSpin.value() == 0.2
+    assert wizard.cohesionSpin.value() == 1.2
     assert wizard.frictionAngleSpin.value() == 19.0
     assert wizard.rmrSpin.value() == 44
-    assert wizard.sampleDiameterSpin.value() == 1.0
-    assert wizard.sampleHeightSpin.value() == 1.0
+    assert wizard.sampleDiameterSpin.value() == 54.0
+    assert wizard.sampleHeightSpin.value() == 25.4
 
 
 def test_geological_forms_have_correct_defaults(wizard):

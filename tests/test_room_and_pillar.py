@@ -19,7 +19,7 @@ def rap_object(request):
 def rap_obj2(request):
     formula = StrengthFormula(alpha=0.5, beta=-0.7, k=10.44, unit_system=StrengthFormula.METRIC,
                               category=StrengthFormula.EXPONENTIAL, k_type=StrengthFormula.OTHER)
-    sample = Sample(strength=Q_("10.44megapascal"), height=Q_("40in"), diameter=Q_("54mm"))
+    sample = Sample(strength=Q_("3822psi"), height=Q_("40in"), diameter=Q_("54mm"))
     pillar = Pillar(sample, height=Q_("3m"), length=Q_("7m"), width=Q_("7m"))
     rap = RoomAndPillar(pillar=pillar, room_span=Q_("6m"))
     rap.seam_height = Q_("3m")
@@ -27,6 +27,19 @@ def rap_obj2(request):
     rap.overburden_density = Q_("22.5kilonewton per metre ** 3")
     rap.formula = formula
     return rap
+
+
+@pytest.fixture
+def amoako_rap(request):
+    formula = StrengthFormula(alpha=0.4, beta=-0.6, k=15, k_type=StrengthFormula.OTHER, fos=(1, 1.5, 2.0),
+                              unit_system=StrengthFormula.METRIC, category=StrengthFormula.EXPONENTIAL)
+    sample = Sample(strength=Q_("3822psi"), height=Q_("40in"), diameter=Q_("54mm"))
+    pillar = Pillar(sample, height=Q_("4m"), length=Q_("4m"), width=Q_("4m"))
+    amoako = RoomAndPillar(pillar, formula, Q_("6m"))
+    amoako.overburden_density = Q_("20kilonewton per metre ** 3")
+    amoako.mine_depth = Q_("150m")
+    amoako.seam_dip = Q_("15degrees")
+    return amoako
 
 
 @pytest.fixture
@@ -74,11 +87,18 @@ def test_rap_object_extraction_ratio(rap_object):
     assert round(result, 2) == 37.21
 
 
-def test_room_and_pillar_returns_correct_fos_for_defined_strength_formula(rap_obj2):
-    pytest.skip("WIP")
-    result = rap_obj2.factor_of_safety
-    expected = 1.1
-    assert round(result, 1) == expected
+def test_room_and_pillar_returns_correct_fos_for_defined_strength_formula(amoako_rap):
+    assert round(amoako_rap.factor_of_safety, 2) == 0.61
+
+
+def test_room_and_pillar_returns_correct_pillar_strength_for_defined_strength_formula(amoako_rap):
+    assert round(amoako_rap.pillar_strength, 2) == Q_("11.37megapascal")
+
+
+def test_room_and_pillar_width_from_stress_and_fos(amoako_rap):
+    amoako_rap.pillar_width_from_fos_and_stress()
+    result = amoako_rap.pillar.width
+    assert round(result, 1) == Q_("7.5m")
 
 # --- Shape Factor Test -----------
 

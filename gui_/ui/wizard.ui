@@ -853,7 +853,7 @@ p, li { white-space: pre-wrap; }
              <string> MPa</string>
             </property>
             <property name="value">
-             <double>0.200000000000000</double>
+             <double>1.200000000000000</double>
             </property>
            </widget>
           </item>
@@ -863,10 +863,10 @@ p, li { white-space: pre-wrap; }
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
             <property name="suffix">
-             <string> in</string>
+             <string> cm</string>
             </property>
             <property name="value">
-             <double>1.000000000000000</double>
+             <double>25.399999999999999</double>
             </property>
            </widget>
           </item>
@@ -935,10 +935,10 @@ p, li { white-space: pre-wrap; }
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
             <property name="suffix">
-             <string> in</string>
+             <string> mm</string>
             </property>
             <property name="value">
-             <double>1.000000000000000</double>
+             <double>54.000000000000000</double>
             </property>
            </widget>
           </item>

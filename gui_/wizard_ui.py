@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'wizard.ui'
 #
-# Created: Sat Apr 22 08:38:35 2017
+# Created: Tue Apr 25 00:51:43 2017
 #      by: pyside-uic 0.2.15 running on PySide 1.2.4
 #
 # WARNING! All changes made in this file will be lost!
@@ -366,12 +366,12 @@ class Ui_Wizard(object):
         self.gridLayout.addWidget(self.rmrSpin, 4, 5, 1, 1)
         self.cohesionSpin = QtGui.QDoubleSpinBox(self.scrollAreaWidgetContents_2)
         self.cohesionSpin.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.cohesionSpin.setProperty("value", 0.2)
+        self.cohesionSpin.setProperty("value", 1.2)
         self.cohesionSpin.setObjectName("cohesionSpin")
         self.gridLayout.addWidget(self.cohesionSpin, 2, 5, 1, 1)
         self.sampleHeightSpin = QtGui.QDoubleSpinBox(self.scrollAreaWidgetContents_2)
         self.sampleHeightSpin.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.sampleHeightSpin.setProperty("value", 1.0)
+        self.sampleHeightSpin.setProperty("value", 25.4)
         self.sampleHeightSpin.setObjectName("sampleHeightSpin")
         self.gridLayout.addWidget(self.sampleHeightSpin, 3, 5, 1, 1)
         self.sampleHeightLabel = QtGui.QLabel(self.scrollAreaWidgetContents_2)
@@ -394,7 +394,7 @@ class Ui_Wizard(object):
         self.gridLayout.addWidget(self.cylindricalSampleRadio, 1, 0, 1, 4)
         self.sampleDiameterSpin = QtGui.QDoubleSpinBox(self.scrollAreaWidgetContents_2)
         self.sampleDiameterSpin.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.sampleDiameterSpin.setProperty("value", 1.0)
+        self.sampleDiameterSpin.setProperty("value", 54.0)
         self.sampleDiameterSpin.setObjectName("sampleDiameterSpin")
         self.gridLayout.addWidget(self.sampleDiameterSpin, 3, 1, 1, 1)
         self.frictionAngleSpin = QtGui.QDoubleSpinBox(self.scrollAreaWidgetContents_2)
@@ -618,12 +618,12 @@ class Ui_Wizard(object):
         self.uniaxStrengthSpin.setSuffix(QtGui.QApplication.translate("Wizard", " MPa", None, QtGui.QApplication.UnicodeUTF8))
         self.rmrLabel.setText(QtGui.QApplication.translate("Wizard", "&RMR:", None, QtGui.QApplication.UnicodeUTF8))
         self.cohesionSpin.setSuffix(QtGui.QApplication.translate("Wizard", " MPa", None, QtGui.QApplication.UnicodeUTF8))
-        self.sampleHeightSpin.setSuffix(QtGui.QApplication.translate("Wizard", " in", None, QtGui.QApplication.UnicodeUTF8))
+        self.sampleHeightSpin.setSuffix(QtGui.QApplication.translate("Wizard", " cm", None, QtGui.QApplication.UnicodeUTF8))
         self.sampleHeightLabel.setText(QtGui.QApplication.translate("Wizard", "Sample &Height:", None, QtGui.QApplication.UnicodeUTF8))
         self.cuboidSampleRadio.setText(QtGui.QApplication.translate("Wizard", "Cu&bical/Cuboid Sample", None, QtGui.QApplication.UnicodeUTF8))
         self.cohesionLabel.setText(QtGui.QApplication.translate("Wizard", "&Cohesion:", None, QtGui.QApplication.UnicodeUTF8))
         self.cylindricalSampleRadio.setText(QtGui.QApplication.translate("Wizard", "C&ylindrical Sample", None, QtGui.QApplication.UnicodeUTF8))
-        self.sampleDiameterSpin.setSuffix(QtGui.QApplication.translate("Wizard", " in", None, QtGui.QApplication.UnicodeUTF8))
+        self.sampleDiameterSpin.setSuffix(QtGui.QApplication.translate("Wizard", " mm", None, QtGui.QApplication.UnicodeUTF8))
         self.frictionAngleSpin.setSuffix(QtGui.QApplication.translate("Wizard", " °", None, QtGui.QApplication.UnicodeUTF8))
         self.label_7.setText(QtGui.QApplication.translate("Wizard", "Geological Information", None, QtGui.QApplication.UnicodeUTF8))
         self.label_10.setText(QtGui.QApplication.translate("Wizard", "Seam Hei&ght:", None, QtGui.QApplication.UnicodeUTF8))

@@ -1,12 +1,20 @@
 from __future__ import division
 from datetime import datetime
 from collections import namedtuple
+from io import StringIO
 import math
+from os.path import dirname, join
+
+from mpmath import findroot
 
 from . import (Q_, unit_reg, ZERO_LENGTH)
 from .utils import cotangent
-# from .rpm_functions import high_stacey_page
+from .constants import OreTypes, Countries
 
+
+rpm_dir = join(dirname(__file__), "..")
+MISC_DIR = join(rpm_dir, "misc")
+print(MISC_DIR)
 
 def requires(obj, attrib_list):
     """
@@ -61,7 +69,7 @@ class StrengthFormula(object):
         return "{}, k={}, a={} and b={}".format(self.name, self.k or self.k_type, self.alpha, self.beta)
 
     def pillar_strength(self, pillar, k=None):
-        k = self._get_correct_k(pillar, k)
+        k = self.get_correct_k(pillar, k)
 
         a_base, b_base = pillar.width, pillar.height
         if self.unit_system == self.METRIC:
@@ -72,22 +80,27 @@ class StrengthFormula(object):
             b_base = b_base.to(unit_reg.foot).magnitude
 
         if self.category == self.LINEAR:
+            # print("using linear relation in pillar strength")
             strength = self.linear_strength(k, a_base, b_base)
         else:
+            # print("using exponential relation in pillar strength")
             strength = self.exponential_strength(k, a_base, b_base)
-        print("Pillar strength incoming!:", strength)
+        # print("Pillar strength incoming!:", strength)
 
         if self.unit_system == self.METRIC:
-            return strength * unit_reg.mpa
+            return strength * unit_reg("megapascal")
         else:
             return strength * unit_reg.psi
 
     def linear_strength(self, k, a_base, b_base):
-        print("using a linear relation")
+        # print("using a linear relation")
         return k * (self.alpha + self.beta * (a_base / b_base))
 
     def exponential_strength(self, k, a_base, b_base):
-        print("using an exponential relation.")
+        # print("using an exponential relation in exponential strength.")
+        # print(k, a_base, self.alpha, b_base, self.beta)
+        # print(a_base ** self.alpha)
+        # print(b_base ** self.beta)
         return k * a_base ** self.alpha * b_base ** self.beta
 
     def is_good_factor_of_safety(self, fos):
@@ -97,7 +110,7 @@ class StrengthFormula(object):
     def recommended_fos(self):
         return self.fos.recommended
 
-    def _get_correct_k(self, pillar=None, default=None):
+    def get_correct_k(self, pillar=None, default=None):
         """
         The various properties that can be used in place of constant k, the material constant
         are properties of the pillar sample. Where this is not the case, they are empirical
@@ -107,7 +120,9 @@ class StrengthFormula(object):
         which it returns.
         When all the above, it raises an AttributeError.
         """
+        print("Trying to get correct k")
         if pillar is not None:
+            print("Pillar is not None")
             sample = pillar.sample
             if self.k_type == self.CUBICAL:
                 k_value = sample.cubical_strength
@@ -128,8 +143,10 @@ class StrengthFormula(object):
                 print(e)
         # These values as raw values and do not need any unit conversion
         if self.k:
+            print("Pillar is none or formula has k")
             return self.k
         elif default:
+            print("Pillar is none or formula has default")
             return default
         raise AttributeError("Attribute k for Pillar Strength formula is None.\n{}".format(self))
 
@@ -154,8 +171,12 @@ holland_gaddy = SF(alpha=0.5, beta=-1, k_type=SF.GADDY, fos=(1.8, 2.0, 2.2), uni
                    category=SF.EXPONENTIAL, name="Holland-Gaddy")
 holland = SF(alpha=0.5, beta=-0.5, k_type=SF.CUBICAL, fos=(1.0, 2.0, 2.0), unit_system=SF.IMPERIAL,
              category=SF.EXPONENTIAL, name="Holland")
+msalamon_munro = SF(alpha=0.46, beta=-0.66, k_type=SF.OTHER, fos=(1.31, 1.6, 1.88), unit_system=SF.METRIC,
+                   category=SF.EXPONENTIAL, k=7.2, name="Salamon-Munro (metric)")
+mbieniawski = SF(alpha=0.64, beta=0.36, k_type=SF.CUBICAL, fos=(1.5, 1.5, 2.0), unit_system=SF.METRIC,
+                category=SF.LINEAR, name="Bieniawski (metric)")
 
-ALL_FORMULA = (hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy)
+ALL_FORMULA = (hardy_agapito, salamon_munro, bieniawski, stacey_page, cmri, obert_duval, holland, holland_gaddy, msalamon_munro, mbieniawski)
 
 
 class Solid(object):
@@ -300,6 +321,20 @@ class RoomAndPillar(object):
         "overburden_density": "Unit Weight of the Overburden",
         "pillar_formula": "Information on Pillar formula to use",
     }
+    PILLAR_DATA = {
+        "width": "Pillar Width",
+        "length": "Pillar Length",
+        "height": "Pillar Height",
+    }
+    OUTPUT = {
+        "extraction_ratio": "Extraction Ratio",
+        "vertical_pre_mining_stress": "Vertical Pre-Mining Stress",
+        "pillar_strength": "Pillar Strength",
+        "pillar_stress": "Pillar Stress",
+        "bearing_capacity": "Bearing Capacity of Floor",
+        "factor_of_safety": "Factor of Safety for Pillar",
+        "bearing_capacity_factor_of_safety": "Factor of Safety for Bearing Capacity"
+    }
     DRILL_BLAST, CONTINUOUS_MINER = range(233583, 233585)
     INITIAL, REDESIGN = "initial", "redesign"
 
@@ -309,6 +344,9 @@ class RoomAndPillar(object):
         self.pillar = pillar
         self.room_span = room_span
         self.formula = formula
+        self.inputIO = ""
+        self.outputIO = ""
+        self.html_report = ""
 
     def print_data(self):
         for attrib, friendly_name in RoomAndPillar.HUMAN_FRIENDLY.items():
@@ -333,6 +371,71 @@ class RoomAndPillar(object):
                     unit = ""
                     magnitude = attribute
                 data_input.write("{}:{} {}\n".format(left_align_pad(friendly_name, biggest_space), magnitude, unit))
+
+    def input_to_html(self):
+        self.inputIO = ""
+        param_string = "<td class='param'>{}</td>"
+        q_value_string = "<td class='value'>{:H}</td>"
+        value_string = "<td class='value'>{}</td>"
+        for attrib, friendly_name in self.HUMAN_FRIENDLY.items():
+            attribute = getattr(self, attrib)
+            param = param_string.format(friendly_name)
+            try:
+                good = round(attribute, 2)
+            except Exception as e:
+                good = attribute
+            if isinstance(attribute, Q_):
+                value = q_value_string.format(good)
+            else:
+                value = value_string.format(good)
+            self.inputIO += "<tr>{}</tr>".format(param + value)
+        # print(self.inputIO.getvalue())
+
+    def output_to_html(self):
+        self.outputIO = ""
+        param_string = "<td class='param'>{}</td>"
+        q_value_string = "<td class='value'>{:H}</td>"
+        value_string = "<td class='value'>{}</td>"
+
+        for attrib, friendly_name in self.PILLAR_DATA.items():
+            attribute = getattr(self.pillar, attrib)
+            param = param_string.format(friendly_name)
+            try:
+                good = round(attribute, 2)
+            except Exception as e:
+                good = attribute
+            if isinstance(attribute, Q_):
+                value = q_value_string.format(good)
+            else:
+                value = value_string.format(good)
+            self.outputIO += "<tr>{}</tr>".format(param + value)
+
+        for attrib, friendly_name in self.OUTPUT.items():
+            attribute = getattr(self, attrib)
+            param = param_string.format(friendly_name)
+            if isinstance(attribute, Q_):
+                value = q_value_string.format(attribute)
+            else:
+                value = value_string.format(attribute)
+            self.outputIO += "<tr>{}</tr>".format(param + value)
+
+    def to_html(self):
+        self.input_to_html()
+        self.output_to_html()
+        string = "<h2>Input</h2><hr><table>{}</table><h2>Output</h2><hr><table>{}</table>"
+        return string.format(self.inputIO, self.outputIO)
+
+    def to_html_with_header(self):
+        raw = self.to_html()
+        html_template = join(MISC_DIR, "template.html")
+        html_file = open(html_template)
+        header = html_file.read()
+        time =  datetime.today().strftime("%I:%M:%S %p")
+        date = datetime.today().strftime("%a, %d/%b/%Y")
+        header += "<p>{}</p><p>{}</p>".format(date, time)
+        html = header + raw + "</body></html>"
+        html_file.close()
+        self.html_report = html
 
     @property
     def vertical_pre_mining_stress(self):
@@ -363,6 +466,24 @@ class RoomAndPillar(object):
         ratio = (1 - first * second).magnitude
         return round(100 * ratio, 2)
 
+    def formula_decide(self):
+        if self.design_type == self.REDESIGN:
+            return
+
+        if self.ore_type == OreTypes.coal and self.location == Countries.india:
+            self.formula = ALL_FORMULA[4]  # c.m.r.i.
+
+        elif self.ore_type == OreTypes.coal:
+            self.formula = ALL_FORMULA[2]  # bieniawski
+
+        elif self.ore_type == OreTypes.oil_shale:
+            self.formula = ALL_FORMULA[0]  # hardy-agapito
+
+        elif self.ore_type == OreTypes.hard_rock:
+            self.formula = ALL_FORMULA[3]   # stacey-page
+        else:
+            self.formula = ALL_FORMULA[2] # bieniaswki
+
     @property
     def pillar_strength(self):
         formula = self.formula
@@ -373,7 +494,7 @@ class RoomAndPillar(object):
             return (outside_bracket + bracket_component) * unit_reg.mpa
 
         elif self.pillar.width_height_ratio > 10:
-            print("This is a squat pillar. Use high stacey-page.")
+            print("This is a highly squat pillar. Use high stacey-page.")
             return self.high_stacey_page()
 
         elif formula.name == "Hardy-Agapito":
@@ -403,7 +524,9 @@ class RoomAndPillar(object):
 
     @property
     def factor_of_safety(self):
-        return (self.pillar_strength.to(unit_reg.psi) / self.pillar_stress).magnitude
+        strength = self.pillar_strength.to(unit_reg("megapascal"))
+        stress = self.pillar_stress.to(unit_reg("megapascal"))
+        return (strength / stress).magnitude
 
     # ------------------ SHAPE FACTORS ------------------------#
 
@@ -446,6 +569,47 @@ class RoomAndPillar(object):
     def bearing_capacity_factor_of_safety(self):
         bc = self.bearing_capacity.to(unit_reg("megapascal"))
         stress = self.pillar_stress.to(unit_reg("megapascal"))
-        print("Bearing Capacity:", bc)
-        print("Pillar Stress:", stress)
+        # print("Bearing Capacity:", bc)
+        # print("Pillar Stress:", stress)
         return (bc / stress).magnitude
+
+    def pillar_width_from_fos_and_stress(self):
+        k = self.formula.get_correct_k(self.pillar)
+        alpha = self.formula.alpha
+        beta = self.formula.beta
+        exp_m = self.formula.recommended_fos * self.vertical_pre_mining_stress.to(unit_reg("megapascal")).magnitude
+        room_span = self.room_span.to(unit_reg.metre).magnitude
+        height = self.pillar.height.to(unit_reg.metre).magnitude
+
+        if self.formula.category == SF.LINEAR:
+            other_coef = (k * beta) / height
+            other_expo = 3
+            square_coef = exp_m - (k * alpha)
+        else:
+            other_coef = k * height ** beta
+            other_expo = alpha + 2
+            square_coef = exp_m
+        print("alpha", alpha)
+        uni_coef = 2 * room_span * exp_m
+        constant_c = exp_m * room_span ** 2
+
+        f = lambda x : other_coef * x ** other_expo - square_coef * x ** 2 - uni_coef * x - constant_c
+        start = self._starting_point(f)
+        pillar_width = findroot(f, start, solver="newton", tol=0.001)
+        # print(pillar_width)
+        pillar_width = Q_("{}metre".format(round(pillar_width, 2)))
+        self.pillar.width = pillar_width
+        self.pillar.length = pillar_width
+
+    def _starting_point(self, f):
+        cur_x, cur_val = 0, f(0)
+        op = "<" if cur_val < 0 else ">"
+        str_comp = "{} {} 0".format(cur_val, op)
+        while eval(str_comp):
+            # print("current x:", cur_x)
+            cur_x += 1
+            cur_val = f(cur_x)
+            str_comp = "{} {} 0".format(cur_val, op)
+
+        # print(cur_x - 1)
+        return cur_x - 1

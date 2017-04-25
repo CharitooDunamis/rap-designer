@@ -2,7 +2,7 @@ import sys
 
 from qtpy.QtCore import (SIGNAL, QSize, QRect)
 from qtpy.QtGui import QKeySequence, QIcon
-from qtpy.QtWidgets import (QAction, QApplication, QDesktopWidget, QGraphicsView, QMainWindow)
+from qtpy.QtWidgets import (QAction, QApplication, QDesktopWidget, QTextBrowser, QMainWindow)
 import qtawesome as qta
 
 from .dialogs import AboutDialog, ExportDialog
@@ -49,8 +49,8 @@ class MineRapper(QMainWindow):
         self.wiz = ProjectWizard(self)
         self.status_bar = self.statusBar()
         self.create_toolbars()
-        self.canvas = QGraphicsView(self)
-        self.setCentralWidget(self.canvas)
+        self.htmlview = QTextBrowser(self)
+        self.setCentralWidget(self.htmlview)
 
         self.rpm = None
         # set to True when any data is modified
@@ -156,24 +156,30 @@ class MineRapper(QMainWindow):
         rpm.seam_dip = quantity_from_spin(self.wiz.seamDipSpin)
         rpm.mine_depth = quantity_from_spin(self.wiz.oreDepthSpin)
 
-        rpm.overburden_density = self.wiz.overburdenDensitySpin.value()
-        rpm.floor_density = self.wiz.floorDensitySpin.value()
+        overburden_density = self.wiz.overburdenDensitySpin.value()
+        rpm.overburden_density = Q_("{}kilonewtons per metre ** 3".format(overburden_density))
+        floor_density = self.wiz.floorDensitySpin.value()
+        rpm.floor_density = Q_("{}kilonewtons per metre ** 3".format(floor_density))
 
         sample = Sample(sample_strength, sample_height, sample_diameter, is_cylinder)
         pillar_length = ZERO_LENGTH
         rpm.pillar = Pillar(sample, rpm.seam_height, pillar_length)
 
         if rpm.design_type == RoomAndPillar.REDESIGN:
+            print("This is a redesign.")
             formula = name_to_formula(self.wiz.pillarFormulaCombo.currentText())
             formula.alpha = self.wiz.constantASpin.value()
             formula.beta = self.wiz.constantBSpin.value()
             if formula.k_type == StrengthFormula.OTHER:
                 formula.k = self.wiz.constantKSpin.value()
-            rpm.pillar_formula = formula
+            rpm.formula = formula
 
         self.rpm = rpm
-        self.rpm.print_data()
         self.update_interface()
+        self.rpm.formula_decide()
+        self.rpm.pillar_width_from_fos_and_stress()
+        self.rpm.to_html_with_header()
+        self.htmlview.setText(self.rpm.html_report)
 
     def save(self):
         if not self.dirty:
